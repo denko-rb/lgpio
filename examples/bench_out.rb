@@ -1,8 +1,8 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-PIN = 260
-COUNT = 1000000
+PIN       = 260
+COUNT     = 1000000
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, PIN, LGPIO::LOW)
@@ -15,3 +15,5 @@ end
 t2 = Time.now
 
 puts "Toggles per second: #{COUNT.to_f / (t2 - t1).to_f}"
+
+LGPIO.chip_close(chip_handle)

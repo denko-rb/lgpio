@@ -1,8 +1,8 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-LED = 260
-INTERVAL = 0.25
+LED       = 260
+INTERVAL  = 0.25
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, LED, LGPIO::LOW)
