@@ -36,6 +36,35 @@ static VALUE gpio_write(VALUE self, VALUE handle, VALUE gpio, VALUE level) {
   return INT2NUM(result);
 }
 
+static VALUE group_claim_input(VALUE self, VALUE handle, VALUE flags, VALUE gpios) {
+  int count = rb_array_len(gpios);
+  int lgGpios[count];
+  int i;
+  for(i=0; i<count; i++) {
+    lgGpios[i] = NUM2INT(rb_ary_entry(gpios, i));
+  }
+  int result = lgGroupClaimInput(NUM2INT(handle), NUM2INT(flags), count, lgGpios);
+  return INT2NUM(result);
+}
+
+static VALUE group_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpios, VALUE levels) {
+  int count = rb_array_len(gpios);
+  int lgGpios[count];
+  int lgLevels[count];
+  int i;
+  for(i=0; i<count; i++) {
+    lgGpios[i]  = NUM2INT(rb_ary_entry(gpios, i));
+    lgLevels[i] = NUM2INT(rb_ary_entry(levels, i));
+  }
+  int result = lgGroupClaimOutput(NUM2INT(handle), NUM2INT(flags), count, lgGpios, lgLevels);
+  return INT2NUM(result);
+}
+
+static VALUE group_free(VALUE self, VALUE handle, VALUE gpio) {
+  int result = lgGroupFree(NUM2INT(handle), NUM2INT(gpio));
+  return INT2NUM(result);
+}
+
 static VALUE tx_busy(VALUE self, VALUE handle, VALUE gpio, VALUE kind) {
   int result = lgTxBusy(NUM2INT(handle), NUM2INT(gpio), NUM2INT(kind));
   return INT2NUM(result);
@@ -79,6 +108,11 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "gpio_claim_output",  gpio_claim_output, 4);
   rb_define_singleton_method(mLGPIO, "gpio_read",          gpio_read,         2);
   rb_define_singleton_method(mLGPIO, "gpio_write",         gpio_write,        3);
+
+  // Grouped
+  rb_define_singleton_method(mLGPIO, "group_claim_input",   group_claim_input,  3);
+  rb_define_singleton_method(mLGPIO, "group_claim_output",  group_claim_output, 4);
+  rb_define_singleton_method(mLGPIO, "group_free",          group_free,         2);
 
   // PWM / Servo / Wave
   rb_define_const(mLGPIO, "TX_PWM", INT2NUM(LG_TX_PWM));
