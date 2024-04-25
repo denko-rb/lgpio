@@ -90,6 +90,24 @@ static VALUE tx_servo(VALUE self, VALUE handle, VALUE gpio, VALUE width, VALUE f
   return INT2NUM(result);
 }
 
+static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
+  // Copy Ruby array to array of lgPulse_t.
+  int       pulseCount = rb_array_len(pulses);
+  lgPulse_t pulsesOut[pulseCount];
+  VALUE     rbPulse;
+  int       i;
+  for(i=0; i<pulseCount; i++) {
+    rbPulse            = rb_ary_entry(pulses, i);
+    pulsesOut[i].bits  = NUM2UINT(rb_ary_entry(rbPulse, 0));
+    pulsesOut[i].mask  = NUM2UINT(rb_ary_entry(rbPulse, 1));
+    pulsesOut[i].delay = NUM2INT (rb_ary_entry(rbPulse, 2));
+  }
+
+  // Add it to wave queue.
+  int result = lgTxWave(NUM2INT(handle), NUM2INT(lead_gpio), pulseCount, pulsesOut);
+  return INT2NUM(result);
+}
+
 void Init_lgpio(void) {
   // Modules
   VALUE mLGPIO = rb_define_module("LGPIO");
@@ -122,4 +140,5 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "tx_pulse", tx_pulse, 6);
   rb_define_singleton_method(mLGPIO, "tx_pwm",   tx_pwm,   6);
   rb_define_singleton_method(mLGPIO, "tx_servo", tx_servo, 6);
+  rb_define_singleton_method(mLGPIO, "tx_wave",  tx_wave,  3);
 }
