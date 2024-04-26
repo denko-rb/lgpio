@@ -11,11 +11,6 @@ static VALUE chip_close(VALUE self, VALUE gpio_dev) {
   return INT2NUM(result);
 }
 
-static VALUE gpio_free(VALUE self, VALUE handle, VALUE gpio) {
-  int result = lgGpioFree(NUM2INT(handle), NUM2INT(gpio));
-  return INT2NUM(result);
-}
-
 static VALUE gpio_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpio, VALUE level) {
   int result = lgGpioClaimOutput(NUM2INT(handle), NUM2INT(flags), NUM2INT(gpio), NUM2INT(level));
   return INT2NUM(result);
@@ -23,6 +18,11 @@ static VALUE gpio_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpio
 
 static VALUE gpio_claim_input(VALUE self, VALUE handle, VALUE flags, VALUE gpio) {
   int result = lgGpioClaimInput(NUM2INT(handle), NUM2INT(flags), NUM2INT(gpio));
+  return INT2NUM(result);
+}
+
+static VALUE gpio_free(VALUE self, VALUE handle, VALUE gpio) {
+  int result = lgGpioFree(NUM2INT(handle), NUM2INT(gpio));
   return INT2NUM(result);
 }
 
@@ -62,6 +62,17 @@ static VALUE group_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpi
 
 static VALUE group_free(VALUE self, VALUE handle, VALUE gpio) {
   int result = lgGroupFree(NUM2INT(handle), NUM2INT(gpio));
+  return INT2NUM(result);
+}
+
+static VALUE group_read(VALUE self, VALUE handle, VALUE gpio) {
+  uint64_t result;
+  lgGroupRead(NUM2INT(handle), NUM2INT(gpio), &result);
+  return UINT2NUM(result);
+}
+
+static VALUE group_write(VALUE self, VALUE handle, VALUE gpio, VALUE bits, VALUE mask) {
+  int result = lgGroupWrite(NUM2INT(handle), NUM2INT(gpio), NUM2UINT(bits), NUM2UINT(mask));
   return INT2NUM(result);
 }
 
@@ -131,6 +142,8 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "group_claim_input",   group_claim_input,  3);
   rb_define_singleton_method(mLGPIO, "group_claim_output",  group_claim_output, 4);
   rb_define_singleton_method(mLGPIO, "group_free",          group_free,         2);
+  rb_define_singleton_method(mLGPIO, "group_read",          group_read,         2);
+  rb_define_singleton_method(mLGPIO, "group_write",         group_write,        4);
 
   // PWM / Servo / Wave
   rb_define_const(mLGPIO, "TX_PWM", INT2NUM(LG_TX_PWM));

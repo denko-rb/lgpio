@@ -7,7 +7,7 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) C library, wh
 ### Progress:
 
 - [x] GPIO Read/Write
-- [ ] GPIO Group Read/Write
+- [x] GPIO Group Read/Write
 - [ ] GPIO Callbacks
 - [x] PWM (software-timed)
 - [x] Wave (software-timed)
