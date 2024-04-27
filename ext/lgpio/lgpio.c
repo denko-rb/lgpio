@@ -6,8 +6,8 @@ static VALUE chip_open(VALUE self, VALUE gpio_dev) {
   return INT2NUM(result);
 }
 
-static VALUE chip_close(VALUE self, VALUE gpio_dev) {
-  int result = lgGpiochipClose(NUM2INT(gpio_dev));
+static VALUE chip_close(VALUE self, VALUE handle) {
+  int result = lgGpiochipClose(NUM2INT(handle));
   return INT2NUM(result);
 }
 

@@ -16,4 +16,5 @@ t2 = Time.now
 
 puts "Toggles per second: #{COUNT.to_f / (t2 - t1).to_f}"
 
+LGPIO.gpio_free(chip_handle, PIN)
 LGPIO.chip_close(chip_handle)
