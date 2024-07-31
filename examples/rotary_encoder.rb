@@ -18,12 +18,15 @@ chip_handle = LGPIO.chip_open(GPIO_CHIP)
 
 # Encoder pin setup
 LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_NONE, PIN_A)
+LGPIO.gpio_set_debounce(chip_handle, PIN_A, 1)
 LGPIO.gpio_claim_alert(chip_handle, 0, LGPIO::BOTH_EDGES, PIN_A)
 LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_NONE, PIN_B)
+LGPIO.gpio_set_debounce(chip_handle, PIN_B, 1)
 LGPIO.gpio_claim_alert(chip_handle, 0, LGPIO::BOTH_EDGES, PIN_B)
 
 # Switch pin setup
 LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_UP,     PIN_SW)
+LGPIO.gpio_set_debounce(chip_handle, PIN_SW, 1)
 LGPIO.gpio_claim_alert(chip_handle, 0, LGPIO::FALLING_EDGE, PIN_SW)
 
 # Start generating reports for GPIO level changes.

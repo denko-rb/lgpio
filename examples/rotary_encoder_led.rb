@@ -25,8 +25,10 @@ LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, PIN_LED, LGPIO::LOW)
 
 # Encoder pin setup
 LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_NONE, PIN_A)
+LGPIO.gpio_set_debounce(chip_handle, PIN_A, 1)
 LGPIO.gpio_claim_alert(chip_handle, 0, LGPIO::BOTH_EDGES, PIN_A)
 LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_NONE, PIN_B)
+LGPIO.gpio_set_debounce(chip_handle, PIN_B, 1)
 LGPIO.gpio_claim_alert(chip_handle, 0, LGPIO::BOTH_EDGES, PIN_B)
 
 # Start generating reports for GPIO level changes.

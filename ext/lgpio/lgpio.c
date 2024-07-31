@@ -83,6 +83,11 @@ static VALUE group_write(VALUE self, VALUE handle, VALUE gpio, VALUE bits, VALUE
   return INT2NUM(result);
 }
 
+static VALUE gpio_set_debounce(VALUE self, VALUE handle, VALUE gpio, VALUE debounce) {
+  int result =  lgGpioSetDebounce(NUM2INT(handle), NUM2INT(gpio), NUM2INT(debounce));
+  return INT2NUM(result);
+}
+
 static VALUE gpio_claim_alert(VALUE self, VALUE handle, VALUE flags, VALUE eFlags, VALUE gpio) {
   int result = lgGpioClaimAlert(NUM2INT(handle), NUM2INT(flags), NUM2INT(eFlags), NUM2INT(gpio), -1);
   return INT2NUM(result);
@@ -200,6 +205,7 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "group_write",         group_write,        4);
   
   // Alerts / Reports
+  rb_define_singleton_method(mLGPIO, "gpio_set_debounce",     gpio_set_debounce,     3);
   rb_define_singleton_method(mLGPIO, "gpio_claim_alert",      gpio_claim_alert,      4);
   rb_define_singleton_method(mLGPIO, "gpio_start_reporting",  gpio_start_reporting,  0);
   rb_define_singleton_method(mLGPIO, "gpio_get_report",       gpio_get_report,       0);
