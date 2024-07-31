@@ -1,6 +1,13 @@
 #include <lgpio.h>
 #include <ruby.h>
 
+// Set up a queue for up to 2**16 GPIO reports.
+static pthread_mutex_t queueLock;
+#define QUEUE_LENGTH UINT16_MAX + 1
+static lgGpioReport_t reportQueue[QUEUE_LENGTH];
+static uint16_t qWritePos = 1;
+static uint16_t qReadPos  = 0;
+
 static VALUE chip_open(VALUE self, VALUE gpio_dev) {
   int result = lgGpiochipOpen(NUM2INT(gpio_dev));
   return INT2NUM(result);
@@ -76,6 +83,50 @@ static VALUE group_write(VALUE self, VALUE handle, VALUE gpio, VALUE bits, VALUE
   return INT2NUM(result);
 }
 
+static VALUE gpio_claim_alert(VALUE self, VALUE handle, VALUE flags, VALUE eFlags, VALUE gpio) {
+  int result = lgGpioClaimAlert(NUM2INT(handle), NUM2INT(flags), NUM2INT(eFlags), NUM2INT(gpio), -1);
+  return INT2NUM(result);
+}
+
+void queue_gpio_reports(int count, lgGpioAlert_p events, void *data){
+  pthread_mutex_lock(&queueLock);
+  for(int i=0; i<count; i++) {
+    memcpy(&reportQueue[qWritePos], &events[i].report, sizeof(lgGpioReport_t));
+    qWritePos += 1;
+    // qReadPos is the LAST report read. If passing by 1, increment it too. Lose oldest data first.
+    if (qWritePos - qReadPos == 1) qReadPos += 1;
+  }
+  pthread_mutex_unlock(&queueLock);
+}
+
+static VALUE gpio_start_reporting(VALUE self) {
+  lgGpioSetSamplesFunc(queue_gpio_reports, NULL);
+}
+
+static VALUE gpio_get_report(VALUE self){  
+  VALUE hash = rb_hash_new();
+  bool popped = false;
+  
+  pthread_mutex_lock(&queueLock);
+  // qWritePos is where the NEXT report will go. Always trail it by 1.
+  if (qWritePos - qReadPos != 1){
+    qReadPos += 1;
+    rb_hash_aset(hash, ID2SYM(rb_intern("timestamp")), ULL2NUM(reportQueue[qReadPos].timestamp));
+    rb_hash_aset(hash, ID2SYM(rb_intern("chip")),      UINT2NUM(reportQueue[qReadPos].chip));
+    rb_hash_aset(hash, ID2SYM(rb_intern("gpio")),      UINT2NUM(reportQueue[qReadPos].gpio));
+    rb_hash_aset(hash, ID2SYM(rb_intern("level")),     UINT2NUM(reportQueue[qReadPos].level));
+    rb_hash_aset(hash, ID2SYM(rb_intern("flags")),     UINT2NUM(reportQueue[qReadPos].flags));
+    popped = true;
+  }
+  pthread_mutex_unlock(&queueLock);
+
+  if (popped){
+    return hash;
+  } else {
+    return Qnil;
+  }
+}
+
 static VALUE tx_busy(VALUE self, VALUE handle, VALUE gpio, VALUE kind) {
   int result = lgTxBusy(NUM2INT(handle), NUM2INT(gpio), NUM2INT(kind));
   return INT2NUM(result);
@@ -130,6 +181,9 @@ void Init_lgpio(void) {
   rb_define_const(mLGPIO, "SET_PULL_UP",      INT2NUM(LG_SET_PULL_UP));
   rb_define_const(mLGPIO, "SET_PULL_DOWN",    INT2NUM(LG_SET_PULL_DOWN));
   rb_define_const(mLGPIO, "SET_PULL_NONE",    INT2NUM(LG_SET_PULL_NONE));
+  rb_define_const(mLGPIO, "RISING_EDGE",      INT2NUM(LG_RISING_EDGE));
+  rb_define_const(mLGPIO, "FALLING_EDGE",     INT2NUM(LG_FALLING_EDGE));
+  rb_define_const(mLGPIO, "BOTH_EDGES",       INT2NUM(LG_BOTH_EDGES));
   rb_define_singleton_method(mLGPIO, "chip_open",          chip_open,         1);
   rb_define_singleton_method(mLGPIO, "chip_close",         chip_close,        1);
   rb_define_singleton_method(mLGPIO, "gpio_free",          gpio_free,         2);
@@ -144,6 +198,11 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "group_free",          group_free,         2);
   rb_define_singleton_method(mLGPIO, "group_read",          group_read,         2);
   rb_define_singleton_method(mLGPIO, "group_write",         group_write,        4);
+  
+  // Alerts / Reports
+  rb_define_singleton_method(mLGPIO, "gpio_claim_alert",      gpio_claim_alert,      4);
+  rb_define_singleton_method(mLGPIO, "gpio_start_reporting",  gpio_start_reporting,  0);
+  rb_define_singleton_method(mLGPIO, "gpio_get_report",       gpio_get_report,       0);
 
   // PWM / Servo / Wave
   rb_define_const(mLGPIO, "TX_PWM", INT2NUM(LG_TX_PWM));
