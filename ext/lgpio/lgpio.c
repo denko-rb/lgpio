@@ -108,10 +108,10 @@ static VALUE gpio_start_reporting(VALUE self) {
   lgGpioSetSamplesFunc(queue_gpio_reports, NULL);
 }
 
-static VALUE gpio_get_report(VALUE self){  
+static VALUE gpio_get_report(VALUE self){
   VALUE hash = rb_hash_new();
   bool popped = false;
-  
+
   pthread_mutex_lock(&queueLock);
   // qWritePos is where the NEXT report will go. Always trail it by 1.
   if (qWritePos - qReadPos != 1){
@@ -175,6 +175,44 @@ static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
   return INT2NUM(result);
 }
 
+static VALUE i2c_open(VALUE self, VALUE i2cDev, VALUE i2cAddr, VALUE i2cFlags){
+  int handle = lgI2cOpen(NUM2INT(i2cDev), NUM2INT(i2cAddr), NUM2INT(i2cFlags));
+  return INT2NUM(handle);
+}
+
+static VALUE i2c_close(VALUE self, VALUE handle){
+  int result = lgI2cClose(NUM2INT(handle));
+  return INT2NUM(result);
+}
+
+static VALUE i2c_write_device(VALUE self, VALUE handle, VALUE byteArray){
+  long count = RARRAY_LEN(byteArray);
+  uint8_t txBuf[count];
+  VALUE currentByte;
+
+  for(int i=0; i<count; i++){
+    currentByte = rb_ary_entry(byteArray, i);
+    Check_Type(currentByte, T_FIXNUM);
+    txBuf[i] = NUM2CHR(currentByte);
+  }
+
+  int result = lgI2cWriteDevice(NUM2INT(handle), txBuf, count);
+  return INT2NUM(result);
+}
+
+static VALUE i2c_read_device(VALUE self, VALUE handle, VALUE count){
+  int length = NUM2INT(count);
+  VALUE retArray = rb_ary_new2(length);
+
+  uint8_t rxBuf[length];
+  lgI2cReadDevice(NUM2INT(handle), rxBuf, length);
+
+  for(int i=0; i<length; i++){
+    rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
+  }
+  return retArray;
+}
+
 void Init_lgpio(void) {
   // Modules
   VALUE mLGPIO = rb_define_module("LGPIO");
@@ -203,7 +241,7 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "group_free",          group_free,         2);
   rb_define_singleton_method(mLGPIO, "group_read",          group_read,         2);
   rb_define_singleton_method(mLGPIO, "group_write",         group_write,        4);
-  
+
   // Alerts / Reports
   rb_define_singleton_method(mLGPIO, "gpio_set_debounce",     gpio_set_debounce,     3);
   rb_define_singleton_method(mLGPIO, "gpio_claim_alert",      gpio_claim_alert,      4);
@@ -219,4 +257,10 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "tx_pwm",   tx_pwm,   6);
   rb_define_singleton_method(mLGPIO, "tx_servo", tx_servo, 6);
   rb_define_singleton_method(mLGPIO, "tx_wave",  tx_wave,  3);
+
+  // I2C
+  rb_define_singleton_method(mLGPIO, "i2c_open",           i2c_open,          3);
+  rb_define_singleton_method(mLGPIO, "i2c_close",          i2c_close,         1);
+  rb_define_singleton_method(mLGPIO, "i2c_write_device",   i2c_write_device,  2);
+  rb_define_singleton_method(mLGPIO, "i2c_read_device",    i2c_read_device,   2);
 }
