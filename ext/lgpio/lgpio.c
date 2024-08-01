@@ -189,7 +189,6 @@ static VALUE i2c_write_device(VALUE self, VALUE handle, VALUE byteArray){
   long count = RARRAY_LEN(byteArray);
   uint8_t txBuf[count];
   VALUE currentByte;
-
   for(int i=0; i<count; i++){
     currentByte = rb_ary_entry(byteArray, i);
     Check_Type(currentByte, T_FIXNUM);
@@ -201,13 +200,37 @@ static VALUE i2c_write_device(VALUE self, VALUE handle, VALUE byteArray){
 }
 
 static VALUE i2c_read_device(VALUE self, VALUE handle, VALUE count){
-  int length = NUM2INT(count);
-  VALUE retArray = rb_ary_new2(length);
+  int rxCount = NUM2INT(count);
+  uint8_t rxBuf[rxCount];
 
-  uint8_t rxBuf[length];
-  lgI2cReadDevice(NUM2INT(handle), rxBuf, length);
+  lgI2cReadDevice(NUM2INT(handle), rxBuf, rxCount);
 
-  for(int i=0; i<length; i++){
+  VALUE retArray = rb_ary_new2(rxCount);
+  for(int i=0; i<rxCount; i++){
+    rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
+  }
+  return retArray;
+}
+
+static VALUE i2c_zip(VALUE self, VALUE handle, VALUE txArray, VALUE rb_rxCount){
+  long txCount = RARRAY_LEN(txArray);
+  uint8_t txBuf[txCount];
+  VALUE currentByte;
+  for(int i=0; i<txCount; i++){
+    currentByte = rb_ary_entry(txArray, i);
+    Check_Type(currentByte, T_FIXNUM);
+    txBuf[i] = NUM2CHR(currentByte);
+  }
+
+  int rxCount = NUM2INT(rb_rxCount);
+  uint8_t rxBuf[rxCount+1];
+
+  // Buffer size must be rxCount+1 or result is LG_BAD_I2C_RLEN
+  int result = lgI2cZip(NUM2INT(handle), txBuf, txCount, rxBuf, rxCount+1);
+
+  if (rxCount == 0) return Qnil;
+  VALUE retArray = rb_ary_new2(rxCount);
+  for(int i=0; i<rxCount; i++){
     rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
   }
   return retArray;
@@ -263,4 +286,5 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "i2c_close",          i2c_close,         1);
   rb_define_singleton_method(mLGPIO, "i2c_write_device",   i2c_write_device,  2);
   rb_define_singleton_method(mLGPIO, "i2c_read_device",    i2c_read_device,   2);
+  rb_define_singleton_method(mLGPIO, "i2c_zip",            i2c_zip,           3);
 }
