@@ -106,6 +106,7 @@ void queue_gpio_reports(int count, lgGpioAlert_p events, void *data){
 
 static VALUE gpio_start_reporting(VALUE self) {
   lgGpioSetSamplesFunc(queue_gpio_reports, NULL);
+  return Qnil;
 }
 
 static VALUE gpio_get_report(VALUE self){
@@ -203,7 +204,8 @@ static VALUE i2c_read_device(VALUE self, VALUE handle, VALUE count){
   int rxCount = NUM2INT(count);
   uint8_t rxBuf[rxCount];
 
-  lgI2cReadDevice(NUM2INT(handle), rxBuf, rxCount);
+  int result = lgI2cReadDevice(NUM2INT(handle), rxBuf, rxCount);
+  if(result < 0) return INT2NUM(result);
 
   VALUE retArray = rb_ary_new2(rxCount);
   for(int i=0; i<rxCount; i++){
@@ -227,6 +229,7 @@ static VALUE i2c_zip(VALUE self, VALUE handle, VALUE txArray, VALUE rb_rxCount){
 
   // Buffer size must be rxCount+1 or result is LG_BAD_I2C_RLEN
   int result = lgI2cZip(NUM2INT(handle), txBuf, txCount, rxBuf, rxCount+1);
+  if(result < 0) return INT2NUM(result);
 
   if (rxCount == 0) return Qnil;
   VALUE retArray = rb_ary_new2(rxCount);
@@ -253,6 +256,7 @@ static VALUE spi_read(VALUE self, VALUE handle, VALUE rxCount){
   uint8_t rxBuf[count+1];
 
   int result = lgSpiRead(NUM2INT(handle), rxBuf, count);
+  if(result < 0) return INT2NUM(result);
 
   VALUE retArray = rb_ary_new2(count);
   for(int i=0; i<count; i++){
@@ -289,6 +293,7 @@ static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray){
   uint8_t rxBuf[count+1];
 
   int result = lgSpiXfer(NUM2INT(handle), txBuf, rxBuf, count);
+  if(result < 0) return INT2NUM(result);
 
   VALUE retArray = rb_ary_new2(count);
   for(int i=0; i<count; i++){
