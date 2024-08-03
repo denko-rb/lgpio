@@ -186,7 +186,7 @@ static VALUE i2c_close(VALUE self, VALUE handle){
 }
 
 static VALUE i2c_write_device(VALUE self, VALUE handle, VALUE byteArray){
-  long count = RARRAY_LEN(byteArray);
+  int count = RARRAY_LEN(byteArray);
   uint8_t txBuf[count];
   VALUE currentByte;
   for(int i=0; i<count; i++){
@@ -213,7 +213,7 @@ static VALUE i2c_read_device(VALUE self, VALUE handle, VALUE count){
 }
 
 static VALUE i2c_zip(VALUE self, VALUE handle, VALUE txArray, VALUE rb_rxCount){
-  long txCount = RARRAY_LEN(txArray);
+  int txCount = RARRAY_LEN(txArray);
   uint8_t txBuf[txCount];
   VALUE currentByte;
   for(int i=0; i<txCount; i++){
@@ -231,6 +231,67 @@ static VALUE i2c_zip(VALUE self, VALUE handle, VALUE txArray, VALUE rb_rxCount){
   if (rxCount == 0) return Qnil;
   VALUE retArray = rb_ary_new2(rxCount);
   for(int i=0; i<rxCount; i++){
+    rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
+  }
+  return retArray;
+}
+
+static VALUE spi_open(VALUE self, VALUE spiDev, VALUE spiChan, VALUE spiBaud, VALUE spiFlags){
+  int handle = lgSpiOpen(NUM2INT(spiDev), NUM2INT(spiChan), NUM2INT(spiBaud), NUM2INT(spiFlags));
+  return INT2NUM(handle);
+}
+
+static VALUE spi_close(VALUE self, VALUE handle){
+  int result = lgSpiClose(NUM2INT(handle));
+  return INT2NUM(result);
+}
+
+static VALUE spi_read(VALUE self, VALUE handle, VALUE rxCount){
+  int count = NUM2INT(rxCount);
+
+  // Not sure if this needs null termination like I2C. +1 won't hurt.
+  uint8_t rxBuf[count+1];
+
+  int result = lgSpiRead(NUM2INT(handle), rxBuf, count);
+
+  VALUE retArray = rb_ary_new2(count);
+  for(int i=0; i<count; i++){
+    rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
+  }
+  return retArray;
+}
+
+static VALUE spi_write(VALUE self, VALUE handle, VALUE txArray){
+  int count = RARRAY_LEN(txArray);
+  uint8_t txBuf[count];
+  VALUE currentByte;
+  for(int i=0; i<count; i++){
+    currentByte = rb_ary_entry(txArray, i);
+    Check_Type(currentByte, T_FIXNUM);
+    txBuf[i] = NUM2CHR(currentByte);
+  }
+
+  int result = lgSpiWrite(NUM2INT(handle), txBuf, count);
+  return INT2NUM(result);
+}
+
+static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray){
+  int count = RARRAY_LEN(txArray);
+  uint8_t txBuf[count];
+  VALUE currentByte;
+  for(int i=0; i<count; i++){
+    currentByte = rb_ary_entry(txArray, i);
+    Check_Type(currentByte, T_FIXNUM);
+    txBuf[i] = NUM2CHR(currentByte);
+  }
+
+  // Not sure if this needs null termination like I2C. +1 won't hurt.
+  uint8_t rxBuf[count+1];
+
+  int result = lgSpiXfer(NUM2INT(handle), txBuf, rxBuf, count);
+
+  VALUE retArray = rb_ary_new2(count);
+  for(int i=0; i<count; i++){
     rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
   }
   return retArray;
@@ -287,4 +348,11 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "i2c_write_device",   i2c_write_device,  2);
   rb_define_singleton_method(mLGPIO, "i2c_read_device",    i2c_read_device,   2);
   rb_define_singleton_method(mLGPIO, "i2c_zip",            i2c_zip,           3);
+
+  // SPI
+  rb_define_singleton_method(mLGPIO, "spi_open",           spi_open,          4);
+  rb_define_singleton_method(mLGPIO, "spi_close",          spi_close,         1);
+  rb_define_singleton_method(mLGPIO, "spi_read",           spi_read,          2);
+  rb_define_singleton_method(mLGPIO, "spi_write",          spi_write,         2);
+  rb_define_singleton_method(mLGPIO, "spi_xfer",           spi_xfer,          2);
 }
