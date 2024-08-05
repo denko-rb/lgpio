@@ -302,6 +302,42 @@ static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray){
   return retArray;
 }
 
+static VALUE spi_ws2812_write(VALUE self, VALUE handle, VALUE pixelArray){
+  int count = RARRAY_LEN(pixelArray);
+
+  // Pull low for at least one byte at 2.4 Mhz before data, and 90 after.
+  int zeroesBefore = 1;
+  int zeroesAfter  = 90;
+  int txBufLength  = zeroesBefore + (count*3) + zeroesAfter;
+  uint8_t txBuf[txBufLength];
+  for (int i=0; i<txBufLength; i++) { txBuf[i] = 0; }
+
+  VALUE    currentByte_rb;
+  uint8_t  currentByte;
+  uint8_t  currentBit;
+  uint32_t temp;
+
+  for (int i=0; i<count; i++){
+    temp = 0;
+    currentByte_rb = rb_ary_entry(pixelArray, i);
+    Check_Type(currentByte_rb, T_FIXNUM);
+    currentByte = NUM2CHR(currentByte_rb);
+
+    for (int i=7; i>=0; i--) {
+      currentBit = (currentByte & (1 << i));
+      temp = temp << 3;
+      temp = (currentBit == 0) ? (temp | 0b100) : (temp | 0b110);
+    }
+
+    txBuf[zeroesBefore+(i*3)]   = (temp >> 16) & 0xFF;
+    txBuf[zeroesBefore+(i*3)+1] = (temp >> 8) & 0xFF;
+    txBuf[zeroesBefore+(i*3)+2] = temp & 0xFF;
+  }
+
+  int result = lgSpiWrite(NUM2INT(handle), txBuf, txBufLength);
+  return INT2NUM(result);
+}
+
 void Init_lgpio(void) {
   // Modules
   VALUE mLGPIO = rb_define_module("LGPIO");
@@ -360,4 +396,5 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "spi_read",           spi_read,          2);
   rb_define_singleton_method(mLGPIO, "spi_write",          spi_write,         2);
   rb_define_singleton_method(mLGPIO, "spi_xfer",           spi_xfer,          2);
+  rb_define_singleton_method(mLGPIO, "spi_ws2812_write",   spi_ws2812_write,  2);
 }
