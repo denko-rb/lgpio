@@ -1,6 +1,6 @@
 require 'lgpio'
 
-I2C_DEV = 2
+I2C_DEV             = 3
 POWER_ON_DELAY      = 0.100
 RESET_DELAY         = 0.020
 COMMAND_DELAY       = 0.010
