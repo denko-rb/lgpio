@@ -1,5 +1,7 @@
 #include <lgpio.h>
 #include <ruby.h>
+#include <stdio.h>
+#include <time.h>
 
 // Set up a queue for up to 2**16 GPIO reports.
 static pthread_mutex_t queueLock;
@@ -174,6 +176,46 @@ static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
   // Add it to wave queue.
   int result = lgTxWave(NUM2INT(handle), NUM2INT(lead_gpio), pulseCount, pulsesOut);
   return INT2NUM(result);
+}
+
+static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inverted, VALUE pulses) {
+  // NOTE: This uses hardware PWM, NOT the lgpio wave interface.
+  // The Ruby class LGPIO::HardwarePWM should have already set the frequency.
+  bool startOn = RTEST(inverted);
+  int remainder = startOn ? 1 : 0;
+
+  // Convert pulses from microseconds to nanoseconds.
+  uint32_t pulseCount = rb_array_len(pulses);
+  struct timespec nanoPulses[pulseCount];
+  for (int i=0; i<pulseCount; i++) {
+    long ns = NUM2UINT(rb_ary_entry(pulses, i)) * 1000;
+    nanoPulses[i].tv_sec = 0;
+    nanoPulses[i].tv_nsec = ns;
+  }
+
+  // Prepare to write duty cycle.
+  const char *filePath = StringValueCStr(dutyPath);
+  FILE *dutyFile = fopen(filePath, "w");
+  if (dutyFile == NULL) {
+    VALUE errorMessage = rb_sprintf("Could not open PWM duty_cycle file: %s", filePath);
+    rb_raise(rb_eRuntimeError, "%s", StringValueCStr(errorMessage));
+  }
+  fclose(dutyFile);
+  const char *cDuty = StringValueCStr(dutyString);
+
+  // Change duty cycle between 0 and duty_ns to generate the modulated wave.
+  for (int i=0; i<pulseCount; i++) {
+    if (i % 2 == remainder){
+      dutyFile = fopen(filePath, "w");
+      fputs("0", dutyFile);
+      fclose(dutyFile);
+    } else {
+      dutyFile = fopen(filePath, "w");
+      fputs(cDuty, dutyFile);
+      fclose(dutyFile);
+    }
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &nanoPulses[i], NULL);
+  }
 }
 
 static VALUE i2c_open(VALUE self, VALUE i2cDev, VALUE i2cAddr, VALUE i2cFlags){
@@ -373,15 +415,16 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "gpio_start_reporting",  gpio_start_reporting,  0);
   rb_define_singleton_method(mLGPIO, "gpio_get_report",       gpio_get_report,       0);
 
-  // PWM / Servo / Wave
+  // Soft PWM / Wave
   rb_define_const(mLGPIO, "TX_PWM", INT2NUM(LG_TX_PWM));
   rb_define_const(mLGPIO, "TX_WAVE",INT2NUM(LG_TX_WAVE));
   rb_define_singleton_method(mLGPIO, "tx_busy",  tx_busy,  3);
   rb_define_singleton_method(mLGPIO, "tx_room",  tx_room,  3);
   rb_define_singleton_method(mLGPIO, "tx_pulse", tx_pulse, 6);
   rb_define_singleton_method(mLGPIO, "tx_pwm",   tx_pwm,   6);
-  rb_define_singleton_method(mLGPIO, "tx_servo", tx_servo, 6);
   rb_define_singleton_method(mLGPIO, "tx_wave",  tx_wave,  3);
+  // Don't use this. Servo will jitter.
+  rb_define_singleton_method(mLGPIO, "tx_servo", tx_servo, 6);
 
   // I2C
   rb_define_singleton_method(mLGPIO, "i2c_open",           i2c_open,          3);
@@ -397,4 +440,8 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "spi_write",          spi_write,         2);
   rb_define_singleton_method(mLGPIO, "spi_xfer",           spi_xfer,          2);
   rb_define_singleton_method(mLGPIO, "spi_ws2812_write",   spi_ws2812_write,  2);
+
+  // Hardware PWM waves for on-off-keying.
+  VALUE cHardwarePWM = rb_define_class_under(mLGPIO, "HardwarePWM", rb_cObject);
+  rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 4);
 }
