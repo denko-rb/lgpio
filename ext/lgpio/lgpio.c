@@ -178,6 +178,14 @@ static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
   return INT2NUM(result);
 }
 
+struct timespec now;
+uint64_t nanosSince(const struct timespec *event) {
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  uint64_t event_ns = (uint64_t)event->tv_sec * 1000000000LL + event->tv_nsec;
+  uint64_t now_ns = (uint64_t)now.tv_sec * 1000000000LL + now.tv_nsec;
+  return now_ns - event_ns;
+}
+
 static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inverted, VALUE pulses) {
   // NOTE: This uses hardware PWM, NOT the lgpio wave interface.
   // The Ruby class LGPIO::HardwarePWM should have already set the frequency.
@@ -186,11 +194,9 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inv
 
   // Convert pulses from microseconds to nanoseconds.
   uint32_t pulseCount = rb_array_len(pulses);
-  struct timespec nanoPulses[pulseCount];
+  uint64_t nanoPulses[pulseCount];
   for (int i=0; i<pulseCount; i++) {
-    long ns = NUM2UINT(rb_ary_entry(pulses, i)) * 1000;
-    nanoPulses[i].tv_sec = 0;
-    nanoPulses[i].tv_nsec = ns;
+    nanoPulses[i] = NUM2UINT(rb_ary_entry(pulses, i)) * 1000;
   }
 
   // Prepare to write duty cycle.
@@ -202,10 +208,11 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inv
   }
   fclose(dutyFile);
   const char *cDuty = StringValueCStr(dutyString);
+  struct timespec pulseStart;
 
-  // Change duty cycle between 0 and duty_ns to generate the modulated wave.
+  // Toggle duty cycle between given value and 0, to modulate the PWM carrier.
   for (int i=0; i<pulseCount; i++) {
-    if (i % 2 == remainder){
+    if (i % 2 == remainder) {
       dutyFile = fopen(filePath, "w");
       fputs("0", dutyFile);
       fclose(dutyFile);
@@ -214,7 +221,9 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inv
       fputs(cDuty, dutyFile);
       fclose(dutyFile);
     }
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &nanoPulses[i], NULL);
+    // Wait for pulse time.
+    clock_gettime(CLOCK_MONOTONIC, &pulseStart);
+    while(nanosSince(&pulseStart) < nanoPulses[i]);
   }
 }
 
