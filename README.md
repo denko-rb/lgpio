@@ -2,23 +2,28 @@
 
 Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library, running on single board computers (SBCs), like Raspberry Pi.
 
-## Standard LGPIO Functions
+## Mapped LGPIO Features
 - [x] GPIO Read/Write
 - [x] GPIO Group Read/Write
 - [x] GPIO Alerts / Callbacks
-  - lg generates alerts at high speed, in a separate thread. In Ruby, they can be read from a queue as part of your application loop.
-- [x] PWM Output
-  - Software timed on any pin. No interface for hardware PWM yet.
+  - lg generates alerts at high speed in a separate thread. You can read them from a queue in Ruby, as part of your application loop.
+- [x] Software PWM Out
+  - Software timed (not 100% precise), on any pin
+  - Not recommended for servo motors
 - [x] Wave
   - Software timed on any pin, as with PWM.
 - [x] I2C
 - [x] SPI
 
-## Extras
+## Extra Features, based on LGPIO
 - [x] WS2812 over SPI
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
 - [ ] Bit Bang SPI
 - [ ] Bit Bang I2C
+
+## Sysfs PWM Interface Features
+- [x] Hardware PWM Out (specific pins per chip)
+- [x] Servo
 
 ## Installation
 On Debian-based Linuxes (RaspberryPi OS, Armbian, DietPi etc.):
