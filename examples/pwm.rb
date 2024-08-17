@@ -1,7 +1,7 @@
 require 'lgpio'
 
 GPIO_CHIP   = 0
-LED         = 260
+LED         = 272
 PWM_FREQ    = 500
 PWM_OFFSET  = 0
 PWM_CYCLES  = 0    # 0 = infinite

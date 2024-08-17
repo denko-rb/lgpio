@@ -5,9 +5,9 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-PIN_A     = 76
-PIN_B     = 228
-PIN_SW    = 226
+PIN_A     = 260
+PIN_B     = 76
+PIN_SW    = 259
 
 # Encoder state
 position = 0

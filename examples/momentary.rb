@@ -1,8 +1,8 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-BUTTON    = 258
-LED       = 260
+BUTTON    = 259
+LED       = 272
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_UP, BUTTON)

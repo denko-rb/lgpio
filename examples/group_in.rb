@@ -2,8 +2,8 @@
 require 'lgpio'
 
 GPIO_CHIP   = 0
-BUTTONS     = [258, 256]
-LEDS        = [260, 267]
+BUTTONS     = [259, 267]
+LEDS        = [272, 258]
 INIT_STATE  = [0, 0]
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)

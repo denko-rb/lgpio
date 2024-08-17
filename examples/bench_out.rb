@@ -1,7 +1,7 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-PIN       = 260
+PIN       = 272
 COUNT     = 1000000
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)

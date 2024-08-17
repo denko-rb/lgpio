@@ -1,7 +1,7 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-PIN       = 76
+PIN       = 259
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 

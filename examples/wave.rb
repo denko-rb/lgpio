@@ -1,7 +1,7 @@
 require 'lgpio'
 
 GPIO_CHIP   = 0
-LEDS        = [260, 267]
+LEDS        = [272, 258]
 INIT_STATE  = [0, 0]
 INTERVAL    = 250_000 # 250ms
 TIMES       = 10

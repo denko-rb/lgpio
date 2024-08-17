@@ -5,10 +5,10 @@
 require 'lgpio'
 
 GPIO_CHIP = 0
-PIN_A     = 76
-PIN_B     = 228
+PIN_A     = 260
+PIN_B     = 76
 
-PIN_LED     = 260
+PIN_LED     = 272
 PWM_FREQ    = 500
 PWM_OFFSET  = 0
 PWM_CYCLES  = 0    # 0 = infinite
@@ -44,7 +44,7 @@ loop do
     elsif report[:gpio] == PIN_B
       delta = (report[:level] == state_a) ? -1 : 1
       state_b = report[:level]
-      
+
       led_duty += delta
       led_duty = 0 if led_duty < 0
       led_duty = 100 if led_duty > 100
