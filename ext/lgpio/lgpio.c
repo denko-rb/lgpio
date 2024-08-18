@@ -186,12 +186,10 @@ uint64_t nanosSince(const struct timespec *event) {
   return now_ns - event_ns;
 }
 
-static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inverted, VALUE pulses) {
+static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pulses) {
   // NOTE: This uses hardware PWM, NOT the lgpio wave interface.
   // The Ruby class LGPIO::HardwarePWM should have already set the frequency.
-  bool startOn = RTEST(inverted);
-  int remainder = startOn ? 1 : 0;
-
+  //
   // Convert pulses from microseconds to nanoseconds.
   uint32_t pulseCount = rb_array_len(pulses);
   uint64_t nanoPulses[pulseCount];
@@ -212,19 +210,23 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE inv
 
   // Toggle duty cycle between given value and 0, to modulate the PWM carrier.
   for (int i=0; i<pulseCount; i++) {
-    if (i % 2 == remainder) {
+    if (i % 2 == 0) {
       dutyFile = fopen(filePath, "w");
-      fputs("0", dutyFile);
+      fputs(cDuty, dutyFile);
       fclose(dutyFile);
     } else {
       dutyFile = fopen(filePath, "w");
-      fputs(cDuty, dutyFile);
+      fputs("0", dutyFile);
       fclose(dutyFile);
     }
     // Wait for pulse time.
     clock_gettime(CLOCK_MONOTONIC, &pulseStart);
     while(nanosSince(&pulseStart) < nanoPulses[i]);
   }
+  // Leave the pin low.
+  dutyFile = fopen(filePath, "w");
+  fputs("0", dutyFile);
+  fclose(dutyFile);
 }
 
 static VALUE i2c_open(VALUE self, VALUE i2cDev, VALUE i2cAddr, VALUE i2cFlags){
@@ -452,5 +454,5 @@ void Init_lgpio(void) {
 
   // Hardware PWM waves for on-off-keying.
   VALUE cHardwarePWM = rb_define_class_under(mLGPIO, "HardwarePWM", rb_cObject);
-  rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 4);
+  rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 3);
 }

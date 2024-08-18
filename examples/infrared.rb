@@ -17,4 +17,8 @@ CODE =  [ 9000, 500,                                  # Start bit
           560]                                        # Stop bit
 
 infrared = LGPIO::Infrared.new(0, 2, frequency: FREQUENCY)
-infrared.transmit(CODE)
+
+loop do
+  infrared.transmit(CODE)
+  sleep 1
+end
