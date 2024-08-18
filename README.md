@@ -16,6 +16,7 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
 - [x] SPI
 
 ## Extra Features, based on LGPIO
+- [x] `LGPIO.gpio_read_pulses_us` rapidly polls for a sequence of input pulses, with an optional reset output pulse at the start. Used for DHT class or similar sensors. See example in `examples/dht.rb`.
 - [x] WS2812 over SPI
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
 - [ ] Bit Bang SPI
