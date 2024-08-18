@@ -178,8 +178,8 @@ static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
   return INT2NUM(result);
 }
 
-struct timespec now;
 uint64_t nanosSince(const struct timespec *event) {
+  struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
   uint64_t event_ns = (uint64_t)event->tv_sec * 1000000000LL + event->tv_nsec;
   uint64_t now_ns = (uint64_t)now.tv_sec * 1000000000LL + now.tv_nsec;
