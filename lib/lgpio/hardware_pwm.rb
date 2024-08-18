@@ -37,6 +37,7 @@ module LGPIO
     end
 
     def duty_percent
+      return 0 if (!duty || !period) || (duty == 0)
       (duty / period.to_f) * 100.0
     end
 
