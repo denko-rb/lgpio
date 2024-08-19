@@ -23,6 +23,18 @@ module LGPIO
       @path ||= "#{SYS_FS_PWM_PATH}pwmchip#{@chip}/pwm#{@channel}/"
     end
 
+    def period_path
+      @period_path ||= "#{path}period"
+    end
+
+    def duty_path
+      @duty_path ||= "#{path}duty_cycle"
+    end
+
+    def enable_path
+      @enable_path ||= "#{path}enable"
+    end
+
     def frequency=(freq)
       self.period = (NS_PER_S / freq.to_f).round
     end
@@ -30,14 +42,14 @@ module LGPIO
     def period=(p)
       old_period = File.read("#{path}period").strip.to_i
       unless (old_period == 0)
-        File.open("#{path}duty_cycle", 'w') { |f| f.write("0") }
+        File.open(duty_path, 'w') { |f| f.write("0") }
       end
-      File.open("#{path}period", 'w')     { |f| f.write(p)   }
+      File.open(period_path, 'w') { |f| f.write(p) }
       @period = p
     end
 
     def duty_percent
-      return 0 if (!duty || !period) || (duty == 0)
+      return 0.0 if (!duty || !period) || (duty == 0)
       (duty / period.to_f) * 100.0
     end
 
@@ -54,17 +66,17 @@ module LGPIO
 
     def duty=(d_ns)
       raise "duty cycle: #{d_ns} ns cannot be longer than period: #{period} ns" if d_ns > period
-      File.open("#{path}duty_cycle", 'w') { |f| f.write(d_ns) }
+      File.open(duty_path, 'w') { |f| f.write(d_ns) }
       @duty = d_ns
     end
 
     def disable
-      File.open("#{path}enable", 'w') { |f| f.write("0") }
+      File.open(enable_path, 'w') { |f| f.write("0") }
       @enabled = false
     end
 
     def enable
-      File.open("#{path}enable", 'w') { |f| f.write("1") }
+      File.open(enable_path, 'w') { |f| f.write("1") }
       @enabled = true
     end
   end
