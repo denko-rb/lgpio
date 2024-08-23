@@ -111,9 +111,9 @@ void queue_gpio_reports(int count, lgGpioAlert_p events, void *data){
   pthread_mutex_lock(&queueLock);
   for(int i=0; i<count; i++) {
     memcpy(&reportQueue[qWritePos], &events[i].report, sizeof(lgGpioReport_t));
-    qWritePos += 1;
+    qWritePos++;
     // qReadPos is the LAST report read. If passing by 1, increment it too. Lose oldest data first.
-    if (qWritePos - qReadPos == 1) qReadPos += 1;
+    if (qWritePos - qReadPos == 1) qReadPos++;
   }
   pthread_mutex_unlock(&queueLock);
 }
@@ -140,21 +140,17 @@ static VALUE gpio_get_report(VALUE self){
   }
   pthread_mutex_unlock(&queueLock);
 
-  if (popped){
-    return hash;
-  } else {
-    return Qnil;
-  }
+  return (popped) ? hash : Qnil;
 }
 
-static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbReset_us, VALUE rbResetLevel, VALUE rbLimit, VALUE rbTimeout) {
+static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbReset_us, VALUE rbResetLevel, VALUE rbLimit, VALUE rbTimeout_ms) {
   // C values
   int handle          = NUM2INT(rbHandle);
   int gpio            = NUM2INT(rbGPIO);
-  uint32_t reset_us   = NUM2UINT(rbReset_us);
+  uint32_t reset_ns   = NUM2UINT(rbReset_us) * 1000;
   uint8_t  resetLevel = NUM2UINT(rbResetLevel);
   uint32_t limit      = NUM2UINT(rbLimit);
-  uint64_t timeout_ns = NUM2UINT(rbTimeout) * 1000000;
+  uint64_t timeout_ns = NUM2UINT(rbTimeout_ms) * 1000000;
 
   // State setup
   uint64_t pulses_ns[limit];
@@ -165,14 +161,10 @@ static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE
   struct timespec now;
 
   // Perform reset
-  if (reset_us > 0) {
-    uint64_t reset_ns  = reset_us * 1000;
-    uint64_t seconds   = reset_ns / 1000000000;
-    uint64_t remainder = reset_ns % 1000000000;
+  if (reset_ns > 0) {
     struct timespec resetTime;
-    resetTime.tv_sec = seconds;
-    resetTime.tv_nsec = remainder;
-
+    resetTime.tv_sec  = reset_ns / 1000000000;
+    resetTime.tv_nsec = reset_ns % 1000000000;
     int result = lgGpioClaimOutput(handle, LG_SET_PULL_NONE, gpio, resetLevel);
     if (result < 0) return NUM2INT(result);
     nanosleep(&resetTime, NULL);
@@ -253,8 +245,8 @@ static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
 }
 
 static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pulses) {
-  // NOTE: This uses hardware PWM, NOT the lgpio wave interface.
-  // The Ruby class LGPIO::HardwarePWM should have already set the frequency.
+  // NOTE: This uses hardware PWM, NOT the lgpio software PWM/wave interface.
+  // The Ruby class LGPIO::HardwarePWM should have already set the PWM carrier frequency.
   //
   // Convert pulses from microseconds to nanoseconds.
   uint32_t pulseCount = rb_array_len(pulses);
