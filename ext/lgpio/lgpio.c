@@ -10,16 +10,30 @@ static lgGpioReport_t reportQueue[QUEUE_LENGTH];
 static uint16_t qWritePos = 1;
 static uint16_t qReadPos  = 0;
 
-uint64_t nanosDiff(const struct timespec *event2, const struct timespec *event1) {
+static uint64_t nanoDiff(const struct timespec *event2, const struct timespec *event1) {
   uint64_t event2_ns = (uint64_t)event2->tv_sec * 1000000000LL + event2->tv_nsec;
   uint64_t event1_ns = (uint64_t)event1->tv_sec * 1000000000LL + event1->tv_nsec;
   return event2_ns - event1_ns;
 }
 
-uint64_t nanosSince(const struct timespec *event) {
+static uint64_t nanosSince(const struct timespec *event) {
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
-  return nanosDiff(&now, event);
+  return nanoDiff(&now, event);
+}
+
+static void nanoDelay(uint64_t nanos) {
+  struct timespec refTime;
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &refTime);
+  now = refTime;
+  while(nanoDiff(&now, &refTime) < nanos) {
+    clock_gettime(CLOCK_MONOTONIC, &now);
+  }
+}
+
+static void microDelay(uint64_t micros) {
+  nanoDelay(micros * 1000);
 }
 
 static VALUE chip_open(VALUE self, VALUE gpio_dev) {
@@ -107,7 +121,7 @@ static VALUE gpio_claim_alert(VALUE self, VALUE handle, VALUE flags, VALUE eFlag
   return INT2NUM(result);
 }
 
-void queue_gpio_reports(int count, lgGpioAlert_p events, void *data){
+static void queue_gpio_reports(int count, lgGpioAlert_p events, void *data){
   pthread_mutex_lock(&queueLock);
   for(int i=0; i<count; i++) {
     memcpy(&reportQueue[qWritePos], &events[i].report, sizeof(lgGpioReport_t));
@@ -147,7 +161,7 @@ static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE
   // C values
   int handle          = NUM2INT(rbHandle);
   int gpio            = NUM2INT(rbGPIO);
-  uint32_t reset_ns   = NUM2UINT(rbReset_us) * 1000;
+  uint32_t reset_us   = NUM2UINT(rbReset_us);
   uint8_t  resetLevel = NUM2UINT(rbResetLevel);
   uint32_t limit      = NUM2UINT(rbLimit);
   uint64_t timeout_ns = NUM2UINT(rbTimeout_ms) * 1000000;
@@ -161,13 +175,10 @@ static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE
   struct timespec now;
 
   // Perform reset
-  if (reset_ns > 0) {
-    struct timespec resetTime;
-    resetTime.tv_sec  = reset_ns / 1000000000;
-    resetTime.tv_nsec = reset_ns % 1000000000;
+  if (reset_us > 0) {
     int result = lgGpioClaimOutput(handle, LG_SET_PULL_NONE, gpio, resetLevel);
     if (result < 0) return NUM2INT(result);
-    nanosleep(&resetTime, NULL);
+    microDelay(reset_us);
   }
 
   // Initialize timing
@@ -176,15 +187,14 @@ static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE
   now       = start;
 
   // Switch to input and read initial state
-  lgGpioFree(handle, gpio);
   lgGpioClaimInput(handle, LG_SET_PULL_NONE, gpio);
   gpioState = lgGpioRead(handle, gpio);
 
   // Read pulses in nanoseconds
-  while ((nanosDiff(&now, &start) < timeout_ns) && (pulseIndex < limit)) {
+  while ((nanoDiff(&now, &start) < timeout_ns) && (pulseIndex < limit)) {
     clock_gettime(CLOCK_MONOTONIC, &now);
     if (lgGpioRead(handle, gpio) != gpioState) {
-      pulses_ns[pulseIndex] = nanosDiff(&now, &lastPulse);
+      pulses_ns[pulseIndex] = nanoDiff(&now, &lastPulse);
       lastPulse = now;
       gpioState = gpioState ^ 0b1;
       pulseIndex++;
@@ -264,7 +274,6 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
   }
   fclose(dutyFile);
   const char *cDuty = StringValueCStr(dutyString);
-  struct timespec pulseStart;
 
   // Toggle duty cycle between given value and 0, to modulate the PWM carrier.
   for (int i=0; i<pulseCount; i++) {
@@ -278,8 +287,7 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
       fclose(dutyFile);
     }
     // Wait for pulse time.
-    clock_gettime(CLOCK_MONOTONIC, &pulseStart);
-    while(nanosSince(&pulseStart) < nanoPulses[i]);
+    nanoDelay(nanoPulses[i]);
   }
   // Leave the pin low.
   dutyFile = fopen(filePath, "w");
