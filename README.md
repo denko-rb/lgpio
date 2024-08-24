@@ -22,14 +22,14 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
 - [ ] Bit Bang SPI
 - [ ] Bit Bang I2C
-- [x] Bit Bang 1-Wire Basics
+- [x] Bit Bang 1-Wire (Basic)
   - Reset, reading, and writing work.
-  - Example for a connected (not-parasite) DS18B20 temperature sensor is provided.
-  - `one_wire_search` isn't a true search. It's a partial used for an iterative search, called from [denko/piboard](https://github.com/denko-rb/denko-piboard).
-  - If you need search, CRC, or multiples on one bus, I suggest using denko/piboard, or copying from the OneWire module in [denko](https://github.com/denko-rb/denko).
+  - Example for a connected (not-parasite) DS18B20 temperature sensor provided.
+  - `one_wire_search` isn't a true search. It's a partial, called by [denko/piboard](https://github.com/denko-rb/denko-piboard).
+  - If you need search, CRC, or multiples on a bus, use `denko/piboard`, or copy from [denko](https://github.com/denko-rb/denko).
 
 ## Sysfs PWM Interface Features
-*Note:* If the Hardware PWM channel for a pin is started, it can only be used as PWM until rebooting. The associated GPIO for that pin will not work.
+**Note:** If the hardware PWM channel for a pin is started, it can only be used as PWM until rebooting. The associated GPIO for that pin will not work.
 - [x] Hardware PWM Out (specific pins, depending on board)
 - [x] Servo
 - [x] On-off keying (OOK) modulated waves
@@ -41,10 +41,8 @@ On Debian-based Linuxes (RaspberryPi OS, Armbian, DietPi etc.):
 ```bash
 sudo apt install swig python3-dev python3-setuptools
 
-# NOTE: There's a bug with GPIO numbers > 255.
-# If you need to use those, wget the second URL instead, until that fix is merged.
-wget https://github.com/joan2937/lg/archive/master.zip
-# wget https://github.com/vickash/lg/archive/refs/heads/master.zip
+# Temporary fork of: wget https://github.com/joan2937/lg/archive/master.zip
+wget https://github.com/vickash/lg/archive/refs/heads/master.zip
 
 unzip master.zip
 cd lg-master
