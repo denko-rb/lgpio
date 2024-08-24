@@ -22,9 +22,15 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
 - [ ] Bit Bang SPI
 - [ ] Bit Bang I2C
+- [x] Bit Bang 1-Wire Basics
+  - Reset, reading, and writing work.
+  - Example for a connected (not-parasite) DS18B20 temperature sensor is provided.
+  - `one_wire_search` isn't a true search. It's a partial used for an iterative search, called from [denko/piboard](https://github.com/denko-rb/denko-piboard).
+  - If you need search, CRC, or multiples on one bus, I suggest using denko/piboard, or copying from the OneWire module in [denko](https://github.com/denko-rb/denko).
 
 ## Sysfs PWM Interface Features
-- [x] Hardware PWM Out (specific pins per chip)
+*Note:* If the Hardware PWM channel for a pin is started, it can only be used as PWM until rebooting. The associated GPIO for that pin will not work.
+- [x] Hardware PWM Out (specific pins, depending on board)
 - [x] Servo
 - [x] On-off keying (OOK) modulated waves
   - Useful for sending infrared signals at 38kHz, for example.
@@ -49,13 +55,14 @@ gem install lgpio
 ```
 
 ## Enabling Hardware & Permissions
-Depending on your SBC and Linux distro/version, you may need to manually enable I2C and SPI hardware. You should use the setup or config tool that came with your distro for that.
+Depending on your SBC and Linux distro/version, you may need to manually enable hardware I2C, SPI, and PWM. You should use the config tool that came with your distro for that, if possible.
 
-You may also not have permission to access the GPIO and peripherals. To run without `sudo`, you need read+write permission to some or all of the following devices:
+Even when these are enabled, you may not have permission to access them. To run without `sudo`, you need read+write permission to some or all of the following:
 ```
-/dev/gpiochip* (For GPIO, example: /dev/gpiochip0)
-/dev/i2c-*     (For I2C,  example: /dev/i2c-1)
-/dev/spidev*   (For SPI,  example: /dev/spidev-0.1)
+/dev/gpiochip*          (For GPIO, example: /dev/gpiochip0)
+/dev/i2c-*              (For I2C,  example: /dev/i2c-1)
+/dev/spidev*            (For SPI,  example: /dev/spidev-0.1)
+/sys/class/pwm/pwmchip* (For PWM,  example: /sys/class/pwm/pwmchip0)
 ```
 
 ## Documentation
