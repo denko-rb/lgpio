@@ -46,6 +46,11 @@ static VALUE chip_close(VALUE self, VALUE handle) {
   return INT2NUM(result);
 }
 
+static VALUE gpio_get_mode(VALUE self, VALUE handle, VALUE gpio) {
+  int result = lgGpioGetMode(NUM2INT(handle), NUM2INT(gpio));
+  return INT2NUM(result);
+}
+
 static VALUE gpio_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpio, VALUE level) {
   int result = lgGpioClaimOutput(NUM2INT(handle), NUM2INT(flags), NUM2INT(gpio), NUM2INT(level));
   return INT2NUM(result);
@@ -694,6 +699,7 @@ void Init_lgpio(void) {
   rb_define_const(mLGPIO, "BOTH_EDGES",       INT2NUM(LG_BOTH_EDGES));
   rb_define_singleton_method(mLGPIO, "chip_open",          chip_open,         1);
   rb_define_singleton_method(mLGPIO, "chip_close",         chip_close,        1);
+  rb_define_singleton_method(mLGPIO, "gpio_get_mode",      gpio_get_mode,     2);
   rb_define_singleton_method(mLGPIO, "gpio_free",          gpio_free,         2);
   rb_define_singleton_method(mLGPIO, "gpio_claim_input",   gpio_claim_input,  3);
   rb_define_singleton_method(mLGPIO, "gpio_claim_output",  gpio_claim_output, 4);
