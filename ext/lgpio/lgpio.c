@@ -157,6 +157,49 @@ static VALUE gpio_get_report(VALUE self){
   return (popped) ? hash : Qnil;
 }
 
+static VALUE gpio_read_ultrasonic(VALUE self, VALUE rbHandle, VALUE rbTrigger, VALUE rbEcho, VALUE rbTriggerTime) {
+  int handle            = NUM2UINT(rbHandle);
+  int trigger           = NUM2UINT(rbTrigger);
+  int echo              = NUM2UINT(rbEcho);
+  uint32_t triggerTime  = NUM2UINT(rbTriggerTime);
+  struct timespec start;
+  struct timespec now;
+  bool echoSeen = false;
+
+  // Pull down avoids false readings if disconnected.
+  lgGpioClaimInput(handle, LG_SET_PULL_DOWN, echo);
+
+  // Initial pulse on the triger pin.
+  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, trigger, 0);
+  microDelay(5);
+  lgGpioWrite(handle, trigger, 1);
+  microDelay(triggerTime);
+  lgGpioWrite(handle, trigger, 0);
+
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  now = start;
+
+  // Wait for echo to go high, up to 25,000 us after trigger.
+  while(nanoDiff(&now, &start) < 25000000){
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (lgGpioRead(handle, echo) == 1) {
+      echoSeen = true;
+      start = now;
+      break;
+    }
+  }
+  if (!echoSeen) return Qnil;
+
+  // Wait for echo to go low again, up to 25,000 us after echo start.
+  while(nanoDiff(&now, &start) < 25000000){
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (lgGpioRead(handle, echo) == 0) break;
+  }
+
+  // High pulse time in microseconds.
+  return INT2NUM(round(nanoDiff(&now, &start) / 1000.0));
+}
+
 static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbReset_us, VALUE rbResetLevel, VALUE rbLimit, VALUE rbTimeout_ms) {
   // C values
   int handle          = NUM2INT(rbHandle);
@@ -671,6 +714,7 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "gpio_get_report",       gpio_get_report,       0);
 
   // Pulse Input
+  rb_define_singleton_method(mLGPIO, "gpio_read_ultrasonic",  gpio_read_ultrasonic,  4);
   rb_define_singleton_method(mLGPIO, "gpio_read_pulses_us",   gpio_read_pulses_us,   6);
 
   // Soft PWM / Wave

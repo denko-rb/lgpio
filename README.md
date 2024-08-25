@@ -17,7 +17,8 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
 - [x] SPI
 
 ## Extra Features, based on LGPIO
-- [x] `LGPIO.gpio_read_pulses_us` rapidly polls for a sequence of input pulses, with an optional (output) reset pulse at the start. Used for DHT class or similar sensors. See `examples/dht.rb`.
+- [x] `LGPIO.gpio_read_ultrasonic` sends a pulse on a trigger pin, then measures a single pulse on a separate (echo) pin. Used for HC-SR04 or similar sensors. See `examples/hcsr04.rb`.
+- [x] `LGPIO.gpio_read_pulses_us` rapidly polls for a sequence of input pulses, with an optional (output) reset pulse at the start. Used for DHT-class or similar sensors. See `examples/dht.rb`.
 - [x] WS2812 addressable LEDs over SPI
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
 - [ ] Bit Bang SPI
