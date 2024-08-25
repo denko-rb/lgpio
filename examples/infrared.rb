@@ -1,7 +1,5 @@
 require 'lgpio'
 
-GPIO_CHIP   = 0
-PIN         = 272
 FREQUENCY   = 38_000
 
 # NEC Raw-Data=0xF708FB04. LSBFIRST, so the binary for each hex digit below is backward.
