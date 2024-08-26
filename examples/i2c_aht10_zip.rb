@@ -1,6 +1,7 @@
 require 'lgpio'
 
 I2C_DEV             = 3
+ADDRESS             = 0x38
 POWER_ON_DELAY      = 0.100
 RESET_DELAY         = 0.020
 COMMAND_DELAY       = 0.010
@@ -10,7 +11,7 @@ INIT_AND_CALIBRATE  = [5, 3, 0xE1, 0x08, 0x00, 0]
 START_MEASUREMENT   = [5, 3, 0xAC, 0x33, 0x00, 0]
 READ_SIX            = [4, 6, 0]
 
-aht10_handle = LGPIO.i2c_open(I2C_DEV, 0x38, 0)
+aht10_handle = LGPIO.i2c_open(I2C_DEV, ADDRESS, 0)
 
 # Startup sequence
 sleep(POWER_ON_DELAY)

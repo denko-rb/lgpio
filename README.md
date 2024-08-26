@@ -21,8 +21,8 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
 - [x] `LGPIO.gpio_read_pulses_us` rapidly polls for a sequence of input pulses, with an optional (output) reset pulse at the start. Used for DHT-class or similar sensors. See `examples/dht.rb`.
 - [x] WS2812 addressable LEDs over SPI
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
+- [x] Bit Bang I2C
 - [ ] Bit Bang SPI
-- [ ] Bit Bang I2C
 - [x] Bit Bang 1-Wire (Basic)
   - Reset, reading, and writing work.
   - Example for a connected (not-parasite) DS18B20 temperature sensor provided.

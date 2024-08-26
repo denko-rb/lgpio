@@ -681,6 +681,185 @@ static VALUE one_wire_write(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbPa
 }
 
 /*****************************************************************************/
+/*                            BIT-BANG I2C                                   */
+/*****************************************************************************/
+// Start condition is SDA then SCL going low, from both high.
+static void i2c_bb_start(int handle, int scl, int sda, uint32_t quarterPeriod_ns) {
+  nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, sda, 0);
+  nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, scl, 0);
+}
+
+// Stop condition is SDA going high, while SCL is also high.
+static void i2c_bb_stop(int handle, int scl, int sda, uint32_t quarterPeriod_ns) {
+  nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, sda, 0);
+  nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, scl, 1);
+  nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, sda, 1);
+}
+
+static uint8_t i2c_bb_read_bit(int handle, int scl, int sda, uint32_t quarterPeriod_ns) {
+  uint8_t bit;
+
+  // Ensure SDA high before we pull SCL high.
+  // nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, sda, 1);
+  nanoDelay(quarterPeriod_ns);
+
+  // Pull SCL high.
+  lgGpioWrite(handle, scl, 1);
+
+  // Wait 1/4 period and sample SDA.
+  nanoDelay(quarterPeriod_ns);
+  bit = lgGpioRead(handle, sda);
+
+  // Leave SCL low.
+  // nanoDelay(quarterPeriod_ns);
+  lgGpioWrite(handle, scl, 0);
+
+  return bit;
+}
+
+static void i2c_bb_write_bit(int handle, int scl, int sda, uint32_t quarterPeriod_ns, uint8_t bit) {
+  // nanoDelay(quarterPeriod_ns);
+  // Set SDA while SCL is low.
+  if (bit == 0) {
+    lgGpioWrite(handle, sda, 0);
+  } else {
+    lgGpioWrite(handle, sda, 1);
+  }
+  // nanoDelay(quarterPeriod_ns);
+
+  // Pull SCL high, wait (should be half cycle), then leave it low.
+  lgGpioWrite(handle, scl, 1);
+  nanoDelay(quarterPeriod_ns);
+  // i2c_bb_delay_half_period();
+  lgGpioWrite(handle, scl, 0);
+}
+
+static uint8_t i2c_bb_read_byte(int handle, int scl, int sda, uint32_t quarterPeriod_ns, bool ack) {
+  uint8_t b;
+
+  // Receive MSB first.
+  for (int i=7; i>=0; i--) bitWriteU8(&b, i, i2c_bb_read_bit(handle, scl, sda, quarterPeriod_ns));
+
+  // Send ACK or NACK and return byte.
+  if (ack) {
+    i2c_bb_write_bit(handle, scl, sda, quarterPeriod_ns, 0);
+  } else {
+    i2c_bb_write_bit(handle, scl, sda, quarterPeriod_ns, 1);
+  }
+  return b;
+}
+
+static int i2c_bb_write_byte(int handle, int scl, int sda, uint32_t quarterPeriod_ns, uint8_t b) {
+  // Send MSB first.
+  for (int i=7; i>=0; i--) i2c_bb_write_bit(handle, scl, sda, quarterPeriod_ns, bitReadU8(&b, i));
+
+  // Return -1 for NACK, 0 for ACK.
+  return (i2c_bb_read_bit(handle, scl, sda, quarterPeriod_ns) == 0) ? 0 : -1;
+}
+
+static VALUE i2c_bb_search(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA) {
+  int handle = NUM2INT(rbHandle);
+  int scl    = NUM2INT(rbSCL);
+  int sda    = NUM2INT(rbSDA);
+  int ack;
+  uint8_t present[128];
+  uint8_t presentCount = 0;
+
+  // SCL is a driven output. SDA is open drain with pullup enabled.
+  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
+
+  // Only addresses from 0x08 to 0x77 are usable (8 to 127).
+  for (uint8_t addr = 0x08; addr < 0x78;  addr++) {
+    i2c_bb_start(handle, scl, sda, 250);
+    ack = i2c_bb_write_byte(handle, scl, sda, 250, ((addr << 1) & 0b11111110));
+    i2c_bb_stop(handle, scl, sda, 1000);
+    if (ack == 0){
+      present[addr] = 1;
+      presentCount++;
+    } else {
+      present[addr] = 0;
+    }
+  }
+  if (presentCount == 0) return Qnil;
+
+  VALUE retArray = rb_ary_new2(presentCount);
+  uint8_t i = 0;
+  for (uint8_t addr = 0x08; addr < 0x78;  addr++) {
+    if (present[addr] == 1) {
+      rb_ary_store(retArray, i, UINT2NUM(addr));
+      i++;
+    }
+  }
+  return retArray;
+}
+
+static VALUE i2c_bb_write(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, VALUE rbAddress, VALUE txArray) {
+  int handle = NUM2INT(rbHandle);
+  int scl    = NUM2INT(rbSCL);
+  int sda    = NUM2INT(rbSDA);
+  uint8_t address      = NUM2CHR(rbAddress);
+  uint8_t writeAddress = (address << 1) & 0b11111110;
+
+  int count = RARRAY_LEN(txArray);
+  uint8_t txBuf[count];
+  VALUE currentByte;
+  for(int i=0; i<count; i++){
+    currentByte = rb_ary_entry(txArray, i);
+    Check_Type(currentByte, T_FIXNUM);
+    txBuf[i] = NUM2CHR(currentByte);
+  }
+
+  // SCL is a driven output. SDA is open drain with pullup enabled.
+  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
+
+  i2c_bb_start(handle, scl, sda, 250);
+  i2c_bb_write_byte(handle, scl, sda, 250, writeAddress);
+  for (int i=0; i<count; i++) i2c_bb_write_byte(handle, scl, sda, 250, txBuf[i]);
+  i2c_bb_stop(handle, scl, sda, 250);
+}
+
+static VALUE i2c_bb_read(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, VALUE rbAddress, VALUE rbCount) {
+  int handle = NUM2INT(rbHandle);
+  int scl    = NUM2INT(rbSCL);
+  int sda    = NUM2INT(rbSDA);
+  uint8_t address      = NUM2CHR(rbAddress);
+  uint8_t readAddress  = (address << 1) | 0b00000001;
+
+  int count = NUM2INT(rbCount);
+  uint8_t rxBuf[count];
+
+  // SCL is a driven output. SDA is open drain with pullup enabled.
+  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
+
+  i2c_bb_start(handle, scl, sda, 250);
+  int ack = i2c_bb_write_byte(handle, scl, sda, 250, readAddress);
+  // Device with this address not present on the bus.
+  if (ack != 0) return Qnil;
+
+  // Read and ACK for all but the last byte.
+  int pos = 0;
+  while(pos < count-1) {
+    rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, 250, true);
+    pos++;
+  }
+  rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, 250, false);
+  i2c_bb_stop(handle, scl, sda, 250);
+
+  VALUE retArray = rb_ary_new2(count);
+  for(int i=0; i<count; i++) rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
+  return retArray;
+}
+
+/*****************************************************************************/
 /*                           EXTENSION INIT                                  */
 /*****************************************************************************/
 void Init_lgpio(void) {
@@ -758,4 +937,9 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "one_wire_search", one_wire_search, 3);
   rb_define_singleton_method(mLGPIO, "one_wire_read",   one_wire_read,   3);
   rb_define_singleton_method(mLGPIO, "one_wire_write",  one_wire_write,  4);
+
+  // Bit-banged I2C
+  rb_define_singleton_method(mLGPIO, "i2c_bb_search",   i2c_bb_search,   3);
+  rb_define_singleton_method(mLGPIO, "i2c_bb_write",    i2c_bb_write,    5);
+  rb_define_singleton_method(mLGPIO, "i2c_bb_read",     i2c_bb_read,     5);
 }
