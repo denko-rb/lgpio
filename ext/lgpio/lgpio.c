@@ -577,7 +577,7 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
 
   // Hold low for 500us to reset, then go high.
   lgGpioFree(handle, gpio);
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN, gpio, 0);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 0);
   microDelay(500);
   lgGpioWrite(handle, gpio, 1);
 
@@ -596,7 +596,7 @@ static VALUE one_wire_search(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbM
   uint64_t mask = NUM2ULL(rbMask);
   uint64_t addr = 0;
   uint64_t comp = 0;
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN, gpio, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 1);
 
   for (int i=0; i<64; i++) {
     bitWriteU64(&addr, i, one_wire_bit_read(handle, gpio));
@@ -639,7 +639,7 @@ static VALUE one_wire_read(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rxCou
   int gpio   = NUM2INT(rbGPIO);
   int count  = NUM2INT(rxCount);
   uint8_t rxBuf[count];
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN, gpio, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 1);
 
   // Read bits into C array.
   for(int i=0; i<count; i++){
@@ -661,7 +661,7 @@ static VALUE one_wire_write(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbPa
   int handle       = NUM2INT(rbHandle);
   int gpio         = NUM2INT(rbGPIO);
   uint8_t parasite = NUM2CHR(rbParasite);
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN, gpio, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 1);
 
   // Go through array and send every bit.
   int count = RARRAY_LEN(txArray);
