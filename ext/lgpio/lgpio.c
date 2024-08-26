@@ -777,9 +777,9 @@ static VALUE i2c_bb_search(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA)
 
   // Only addresses from 0x08 to 0x77 are usable (8 to 127).
   for (uint8_t addr = 0x08; addr < 0x78;  addr++) {
-    i2c_bb_start(handle, scl, sda, 250);
-    ack = i2c_bb_write_byte(handle, scl, sda, 250, ((addr << 1) & 0b11111110));
-    i2c_bb_stop(handle, scl, sda, 1000);
+    i2c_bb_start(handle, scl, sda, 2500);
+    ack = i2c_bb_write_byte(handle, scl, sda, 2500, ((addr << 1) & 0b11111110));
+    i2c_bb_stop(handle, scl, sda, 2500);
     if (ack == 0){
       present[addr] = 1;
       presentCount++;
@@ -820,10 +820,10 @@ static VALUE i2c_bb_write(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, 
   lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
   lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
 
-  i2c_bb_start(handle, scl, sda, 250);
-  i2c_bb_write_byte(handle, scl, sda, 250, writeAddress);
-  for (int i=0; i<count; i++) i2c_bb_write_byte(handle, scl, sda, 250, txBuf[i]);
-  i2c_bb_stop(handle, scl, sda, 250);
+  i2c_bb_start(handle, scl, sda, 500);
+  i2c_bb_write_byte(handle, scl, sda, 500, writeAddress);
+  for (int i=0; i<count; i++) i2c_bb_write_byte(handle, scl, sda, 500, txBuf[i]);
+  i2c_bb_stop(handle, scl, sda, 500);
 }
 
 static VALUE i2c_bb_read(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, VALUE rbAddress, VALUE rbCount) {
@@ -840,19 +840,19 @@ static VALUE i2c_bb_read(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, V
   lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
   lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
 
-  i2c_bb_start(handle, scl, sda, 250);
-  int ack = i2c_bb_write_byte(handle, scl, sda, 250, readAddress);
+  i2c_bb_start(handle, scl, sda, 500);
+  int ack = i2c_bb_write_byte(handle, scl, sda, 500, readAddress);
   // Device with this address not present on the bus.
   if (ack != 0) return Qnil;
 
   // Read and ACK for all but the last byte.
   int pos = 0;
   while(pos < count-1) {
-    rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, 250, true);
+    rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, 500, true);
     pos++;
   }
-  rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, 250, false);
-  i2c_bb_stop(handle, scl, sda, 250);
+  rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, 500, false);
+  i2c_bb_stop(handle, scl, sda, 500);
 
   VALUE retArray = rb_ary_new2(count);
   for(int i=0; i<count; i++) rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));

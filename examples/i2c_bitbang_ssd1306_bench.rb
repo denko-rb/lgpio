@@ -13,7 +13,7 @@ ADDRESS   = 0x3C
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 
 LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, INIT_ARRAY)
-FRAME_COUNT = 300
+FRAME_COUNT = 100
 
 start = Time.now
 (FRAME_COUNT / 2).times do
