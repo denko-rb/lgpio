@@ -800,6 +800,16 @@ static VALUE i2c_bb_search(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA)
   return retArray;
 }
 
+static VALUE i2c_bb_claim(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA) {
+  int handle = NUM2INT(rbHandle);
+  int scl    = NUM2INT(rbSCL);
+  int sda    = NUM2INT(rbSDA);
+
+  // SCL is a driven output. SDA is open drain with pullup enabled.
+  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
+  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
+}
+
 static VALUE i2c_bb_write(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, VALUE rbAddress, VALUE txArray) {
   int handle = NUM2INT(rbHandle);
   int scl    = NUM2INT(rbSCL);
@@ -816,10 +826,6 @@ static VALUE i2c_bb_write(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, 
     txBuf[i] = NUM2CHR(currentByte);
   }
 
-  // SCL is a driven output. SDA is open drain with pullup enabled.
-  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
-
   i2c_bb_start(handle, scl, sda, 500);
   i2c_bb_write_byte(handle, scl, sda, 500, writeAddress);
   for (int i=0; i<count; i++) i2c_bb_write_byte(handle, scl, sda, 500, txBuf[i]);
@@ -835,10 +841,6 @@ static VALUE i2c_bb_read(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, V
 
   int count = NUM2INT(rbCount);
   uint8_t rxBuf[count];
-
-  // SCL is a driven output. SDA is open drain with pullup enabled.
-  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
 
   i2c_bb_start(handle, scl, sda, 500);
   int ack = i2c_bb_write_byte(handle, scl, sda, 500, readAddress);
@@ -939,6 +941,7 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "one_wire_write",  one_wire_write,  4);
 
   // Bit-banged I2C
+  rb_define_singleton_method(mLGPIO, "i2c_bb_claim",    i2c_bb_claim,    3);
   rb_define_singleton_method(mLGPIO, "i2c_bb_search",   i2c_bb_search,   3);
   rb_define_singleton_method(mLGPIO, "i2c_bb_write",    i2c_bb_write,    5);
   rb_define_singleton_method(mLGPIO, "i2c_bb_read",     i2c_bb_read,     5);

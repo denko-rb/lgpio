@@ -11,6 +11,7 @@ SDA_PIN   = 270
 ADDRESS   = 0x3C
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
+LGPIO.i2c_bb_claim(chip_handle, SCL_PIN, SDA_PIN)
 
 LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, INIT_ARRAY)
 FRAME_COUNT = 100

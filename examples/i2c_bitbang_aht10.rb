@@ -15,6 +15,7 @@ SDA_PIN   = 270
 ADDRESS   = 0x38
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
+LGPIO.i2c_bb_claim(chip_handle, SCL_PIN, SDA_PIN)
 
 # Startup sequence
 sleep(POWER_ON_DELAY)
