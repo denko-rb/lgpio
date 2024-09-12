@@ -685,19 +685,19 @@ static VALUE one_wire_write(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbPa
 /*****************************************************************************/
 // Start condition is SDA then SCL going low, from both high.
 static void i2c_bb_start(int handle, int scl, int sda, uint32_t quarterPeriod_ns) {
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   lgGpioWrite(handle, sda, 0);
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   lgGpioWrite(handle, scl, 0);
 }
 
 // Stop condition is SDA going high, while SCL is also high.
 static void i2c_bb_stop(int handle, int scl, int sda, uint32_t quarterPeriod_ns) {
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   lgGpioWrite(handle, sda, 0);
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   lgGpioWrite(handle, scl, 1);
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   lgGpioWrite(handle, sda, 1);
 }
 
@@ -707,13 +707,13 @@ static uint8_t i2c_bb_read_bit(int handle, int scl, int sda, uint32_t quarterPer
   // Ensure SDA high before we pull SCL high.
   // nanoDelay(quarterPeriod_ns);
   lgGpioWrite(handle, sda, 1);
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
 
   // Pull SCL high.
   lgGpioWrite(handle, scl, 1);
 
   // Wait 1/4 period and sample SDA.
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   bit = lgGpioRead(handle, sda);
 
   // Leave SCL low.
@@ -731,7 +731,7 @@ static void i2c_bb_write_bit(int handle, int scl, int sda, uint32_t quarterPerio
 
   // Pull SCL high, wait (should be half cycle), then leave it low.
   lgGpioWrite(handle, scl, 1);
-  nanoDelay(quarterPeriod_ns);
+  // nanoDelay(quarterPeriod_ns);
   // i2c_bb_delay_half_period();
   lgGpioWrite(handle, scl, 0);
 }
