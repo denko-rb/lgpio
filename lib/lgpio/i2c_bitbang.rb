@@ -9,17 +9,17 @@ module LGPIO
       initialize_pins
     end
 
+    def initialize_pins
+      LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, scl, LGPIO::HIGH)
+      LGPIO.gpio_claim_output(handle, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, sda, LGPIO::HIGH)
+    end
+
     def write_form(address)
-      (address << 1) & 0b11111110
+      (address << 1)
     end
 
     def read_form(address)
       (address << 1) | 0b00000001
-    end
-
-    def initialize_pins
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, scl, LGPIO::HIGH)
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, sda, LGPIO::HIGH)
     end
 
     def start
@@ -61,20 +61,19 @@ module LGPIO
     def write_byte(byte)
       i = 7
       while i >= 0
-        bit = (byte >> i) & 0b1
-        write_bit(bit)
+        write_bit (byte >> i) & 0b1
         i = i - 1
       end
-      # Return -1 unless ACK.
-      (read_bit == 0) ? 0 : -1
+      # Return ACK (SDA pulled low) or NACK (SDA stayed high).
+      (read_bit == 0)
     end
 
     def read(address, count)
       start
       ack = write_byte(read_form(address))
-      return nil if (ack != 0)
+      return nil unless ack
 
-      # Read and ACK for all but the last byte.
+      # Read number of bytes, and ACK for all but the last one.
       bytes = []
       i = 0
       while (i < count-1) do
@@ -98,9 +97,9 @@ module LGPIO
       found = []
       (0x08..0x77).each do |address|
         start
-        ack = write_byte(write_form(address))
+        # Device present if ACK received when we write its address to the bus.
+        found << address if write_byte(write_form(address))
         stop
-        found << address if (ack == 0)
       end
       found
     end

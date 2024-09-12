@@ -811,7 +811,7 @@ static VALUE i2c_bb_write(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, 
   int scl    = NUM2INT(rbSCL);
   int sda    = NUM2INT(rbSDA);
   uint8_t address      = NUM2CHR(rbAddress);
-  uint8_t writeAddress = (address << 1) & 0b11111110;
+  uint8_t writeAddress = (address << 1);
 
   int count = RARRAY_LEN(txArray);
   uint8_t txBuf[count];
