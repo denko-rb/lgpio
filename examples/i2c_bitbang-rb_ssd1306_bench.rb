@@ -11,17 +11,17 @@ SDA_PIN   = 270
 ADDRESS   = 0x3C
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.i2c_bb_claim(chip_handle, SCL_PIN, SDA_PIN)
+i2c_bb = LGPIO::I2CBitBang.new(chip_handle, SCL_PIN, SDA_PIN)
 
-LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, INIT_ARRAY)
+i2c_bb.write(ADDRESS, INIT_ARRAY)
 FRAME_COUNT = 400
 
 start = Time.now
 (FRAME_COUNT / 2).times do
-  LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, START_ARRAY)
-  LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, FILL_ARRAY)
-  LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, START_ARRAY)
-  LGPIO.i2c_bb_write(chip_handle, SCL_PIN, SDA_PIN, ADDRESS, BLANK_ARRAY)
+  i2c_bb.write(ADDRESS, START_ARRAY)
+  i2c_bb.write(ADDRESS, FILL_ARRAY)
+  i2c_bb.write(ADDRESS, START_ARRAY)
+  i2c_bb.write(ADDRESS, BLANK_ARRAY)
 end
 finish = Time.now
 
