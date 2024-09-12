@@ -726,11 +726,7 @@ static uint8_t i2c_bb_read_bit(int handle, int scl, int sda, uint32_t quarterPer
 static void i2c_bb_write_bit(int handle, int scl, int sda, uint32_t quarterPeriod_ns, uint8_t bit) {
   // nanoDelay(quarterPeriod_ns);
   // Set SDA while SCL is low.
-  if (bit == 0) {
-    lgGpioWrite(handle, sda, 0);
-  } else {
-    lgGpioWrite(handle, sda, 1);
-  }
+  lgGpioWrite(handle, sda, bit);
   // nanoDelay(quarterPeriod_ns);
 
   // Pull SCL high, wait (should be half cycle), then leave it low.
