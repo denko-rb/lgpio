@@ -60,7 +60,7 @@ Even when these are enabled, you may not have permission to access them. To run 
 ```
 /dev/gpiochip*          (For GPIO, example: /dev/gpiochip0)
 /dev/i2c-*              (For I2C,  example: /dev/i2c-1)
-/dev/spidev*            (For SPI,  example: /dev/spidev-0.1)
+/dev/spidev*            (For SPI,  example: /dev/spidev0.1)
 /sys/class/pwm/pwmchip* (For PWM,  example: /sys/class/pwm/pwmchip0)
 ```
 
