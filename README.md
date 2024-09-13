@@ -13,8 +13,8 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
   - Not recommended for servo motors.
 - [x] Wave
   - Software timed on any pin, as with PWM.
-- [x] I2C
-- [x] SPI
+- [x] Hardware I2C
+- [x] Hardware SPI
 
 ## Extra Features, based on LGPIO
 - [x] `LGPIO.gpio_read_ultrasonic` sends a pulse on a trigger pin, then measures a single pulse on a separate (echo) pin. Used for HC-SR04 or similar sensors. See `examples/hcsr04.rb`.
@@ -23,11 +23,10 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
   - Only outputs on a SPI MOSI pin. Must be able to set SPI clock frequency to 2.4 MHz.
 - [x] Bit Bang I2C
 - [ ] Bit Bang SPI
-- [x] Bit Bang 1-Wire (Basic)
+- [x] Bit Bang 1-Wire
   - Reset, reading, and writing work.
   - Example for a connected (not-parasite) DS18B20 temperature sensor provided.
-  - `one_wire_search` isn't a true search. It's a partial, called by [denko/piboard](https://github.com/denko-rb/denko-piboard).
-  - If you need search, CRC, or multiples on a bus, use `denko/piboard`, or copy from [denko](https://github.com/denko-rb/denko).
+  - [ ] Search and CRC to be added soon.
 
 ## Sysfs PWM Interface Features
 **Note:** If the hardware PWM channel for a pin is started, it can only be used as PWM until rebooting. The associated GPIO for that pin will not work.
