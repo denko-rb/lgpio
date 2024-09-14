@@ -9,13 +9,13 @@ OUTPUT_PIN  = 27
 START_ARRAY = [0x3C << 1] + [0, 33, 0, 127, 34, 0, 7]
 PATTERN_1   = [0x3C << 1] + [64] + Array.new(1024) { 0b00110011 }
 PATTERN_2   = [0x3C << 1] + [64] + Array.new(1024) { 0b11001100 }
-LOOPS       = 400
+FRAME_COUNT = 400
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 spi_bb      = LGPIO::SPIBitBang.new(handle: chip_handle, clock: CLOCK_PIN, input: INPUT_PIN, output: OUTPUT_PIN)
 
 start = Time.now
-(LOOPS / 2).times do
+(FRAME_COUNT / 2).times do
   spi_bb.transfer(write: START_ARRAY)
   spi_bb.transfer(write: PATTERN_1)
   spi_bb.transfer(write: START_ARRAY)
@@ -36,7 +36,6 @@ LGPIO.chip_close(chip_handle)
 #    - For both buses, the 8 data bits only need 20 C calls in total.
 #  - So... finally, we scale by a factor of 20/23.
 #  - This WILL NOT BE CORRECT if you change the line pattern.
-#  - This doesn't apply the address or startup bytes, and we totally ignore I2C start and stop.
-#  - They are a negligible fraction of the total data being sent.
-fps = (LOOPS / (finish - start)) * (20.0 / 23.0)
+#  - This neglects I2C start and stop calls, and bit changes in the address and start bytes.
+fps = (FRAME_COUNT / (finish - start)) * (20.0 / 23.0)
 puts "SSD1306 equivalent result: #{fps.round(2)} fps"
