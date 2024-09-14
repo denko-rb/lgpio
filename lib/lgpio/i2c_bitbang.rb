@@ -6,12 +6,18 @@ module LGPIO
       @handle = handle
       @scl    = scl
       @sda    = sda
+      @sda_state = nil
       initialize_pins
     end
 
     def initialize_pins
       LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, scl, LGPIO::HIGH)
       LGPIO.gpio_claim_output(handle, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, sda, LGPIO::HIGH)
+    end
+
+    def set_sda(value)
+      return if (@sda_state == value)
+      LGPIO.gpio_write(handle, sda, @sda_state = value)
     end
 
     def write_form(address)
@@ -34,7 +40,7 @@ module LGPIO
     end
 
     def read_bit
-      LGPIO.gpio_write(handle, sda, 1)
+      set_sda(1)
       LGPIO.gpio_write(handle, scl, 1)
       bit = LGPIO.gpio_read(handle, sda)
       LGPIO.gpio_write(handle, scl, 0)
@@ -42,7 +48,7 @@ module LGPIO
     end
 
     def write_bit(bit)
-      LGPIO.gpio_write(handle, sda, bit)
+      set_sda(bit)
       LGPIO.gpio_write(handle, scl, 1)
       LGPIO.gpio_write(handle, scl, 0)
     end
