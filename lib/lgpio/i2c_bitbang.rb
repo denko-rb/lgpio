@@ -73,13 +73,9 @@ module LGPIO
       ack = write_byte(read_form(address))
       return nil unless ack
 
-      # Read number of bytes, and ACK for all but the last one.
+      # Read count bytes, and ACK for all but the last one.
       bytes = []
-      i = 0
-      while (i < count-1) do
-        bytes << read_byte(true)
-        i = i + 1
-      end
+      (count-1).times { bytes << read_byte(true) }
       bytes << read_byte(false)
       stop
 
