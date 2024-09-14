@@ -25,6 +25,9 @@ finish = Time.now
 
 LGPIO.chip_close(chip_handle)
 
-# I2C bytes are 9 bits (not 8 like SPI) on the wire, so scale this result down.
-fps = (LOOPS / (finish - start)) * (8.0 / 9.0)
+# We need to scale the SPI result down because:
+#  - SPI bytes are 8 bits on the wire, while I2C are 9 (8 data bits + ACK bit)
+#  - The I2C ACK needs 4 GPIO calls to C, while data bits on both buses need 3.
+#  - Therefore, scaling factor is (8 * 3) / ((8 * 3) + 4) = 6/7
+fps = (LOOPS / (finish - start)) * (6.0 / 7.0)
 puts "SSD1306 equivalent result: #{fps.round(2)} fps"
