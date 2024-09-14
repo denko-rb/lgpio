@@ -26,8 +26,17 @@ finish = Time.now
 LGPIO.chip_close(chip_handle)
 
 # We need to scale the SPI result down because:
-#  - SPI bytes are 8 bits on the wire, while I2C are 9 (8 data bits + ACK bit)
-#  - The I2C ACK needs 4 GPIO calls to C, while data bits on both buses need 3.
-#  - Therefore, scaling factor is (8 * 3) / ((8 * 3) + 4) = 6/7
-fps = (LOOPS / (finish - start)) * (6.0 / 7.0)
+#  - SPI bytes are 8 bits on the wire, while I2C are 9 (8 data bits + ACK bit).
+#  - The I2C ACK should use 4 GPIO calls to C, while data bits on both buses need 3 calls.
+#  - So the scaling factor should theoretically b (8 * 3) / ((8 * 3) + 4) = 24/28
+#  - This isn't correct. Because of the "lazy" optimization when setting the data pin
+#    (in both protocols), and the line pattern being used, where the first bit of
+#    each byte is the opposite of the last bit of the previous byte, two things change:
+#    - Each I2C ACK is always effecitvely 3 C calls
+#    - For both buses, the 8 data bits only need 20 C calls in total.
+#  - So... finally, we scale by a factor of 20/23.
+#  - This WILL NOT BE CORRECT if you change the line pattern.
+#  - This doesn't apply the address or startup bytes, and we totally ignore I2C start and stop.
+#  - They are a negligible fraction of the total data being sent.
+fps = (LOOPS / (finish - start)) * (20.0 / 23.0)
 puts "SSD1306 equivalent result: #{fps.round(2)} fps"
