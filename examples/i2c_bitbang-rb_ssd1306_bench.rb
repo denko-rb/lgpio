@@ -2,8 +2,8 @@ require 'lgpio'
 
 INIT_ARRAY  = [0, 168, 63, 211, 0, 64, 161, 200, 218, 18, 164, 166, 213, 128, 219, 32, 217, 241, 141, 20, 32, 0, 175]
 START_ARRAY = [0, 33, 0, 127, 34, 0, 7]
-BLANK_ARRAY = [64] + Array.new(1024) { 0 }
-FILL_ARRAY  = [64] + Array.new(1024) { 255 }
+BLANK_ARRAY = [64] + Array.new(1024) { 0b00110011 }
+FILL_ARRAY  = [64] + Array.new(1024) { 0b11001100 }
 
 GPIO_CHIP = 0
 SCL_PIN   = 228
