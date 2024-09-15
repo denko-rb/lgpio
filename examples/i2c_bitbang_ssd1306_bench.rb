@@ -28,4 +28,8 @@ finish = Time.now
 LGPIO.chip_close(chip_handle)
 
 fps = FRAME_COUNT / (finish - start)
-puts "SSD1306 benchmark result: #{fps.round(2)} fps"
+# Also calculate C calls per second, using roughly 23 calls per byte written.
+cps = (START_ARRAY.length + ((PATTERN_1.length + PATTERN_2.length) / 2) + 2) * 23 * fps
+cps = (cps / 1000.0).round
+
+puts "SSD1306 benchmark result: #{fps.round(2)} fps | #{cps}k C calls/s"
