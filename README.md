@@ -24,9 +24,6 @@ Ruby bindings for the [lgpio (lg)](https://github.com/joan2937/lg) Linux library
 - [x] Bit Bang I2C
 - [ ] Bit Bang SPI
 - [x] Bit Bang 1-Wire
-  - Reset, reading, and writing work.
-  - Example for a connected (not-parasite) DS18B20 temperature sensor provided.
-  - [ ] Search and CRC to be added soon.
 
 ## Sysfs PWM Interface Features
 **Note:** If the hardware PWM channel for a pin is started, it can only be used as PWM until rebooting. The associated GPIO for that pin will not work.

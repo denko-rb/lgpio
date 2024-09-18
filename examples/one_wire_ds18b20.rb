@@ -9,17 +9,17 @@ one_wire = LGPIO::OneWire.new(chip_handle, PIN)
 
 one_wire.reset
 # Skip ROM
-one_wire.write([0xCC], parasite: PARASITE)
+one_wire.write([LGPIO::OneWire::SKIP_ROM], parasite: PARASITE)
 # Start conversion
-one_wire.write([0x44], parasite: PARASITE)
+one_wire.write([LGPIO::OneWire::CONVERT_T], parasite: PARASITE)
 # Wait for conversion
 sleep(1)
 # Reset
 one_wire.reset
 # Skip ROM
-one_wire.write([0xCC], parasite: PARASITE)
+one_wire.write([LGPIO::OneWire::SKIP_ROM], parasite: PARASITE)
 # Read 9 bytes from scratchpad
-one_wire.write([0xBE], parasite: PARASITE)
+one_wire.write([LGPIO::OneWire::READ_SCRATCH], parasite: PARASITE)
 bytes = one_wire.read(9)
 
 # Temperature is the first 16 bits (2 bytes of 9 read).
