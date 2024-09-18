@@ -3,6 +3,7 @@ require_relative 'lgpio/version'
 
 require_relative 'lgpio/i2c_bitbang'
 require_relative 'lgpio/spi_bitbang'
+require_relative 'lgpio/one_wire'
 
 require_relative 'lgpio/hardware_pwm'
 require_relative 'lgpio/positional_servo'

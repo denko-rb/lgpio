@@ -532,26 +532,34 @@ static void bitWriteU8(uint8_t* b, uint8_t i, uint8_t v) {
   }
 }
 
-static uint8_t one_wire_bit_read(int handle, int gpio) {
+static VALUE one_wire_bit_read(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
+  int handle  = NUM2INT(rbHandle);
+  int gpio    = NUM2INT(rbGPIO);
+  uint8_t bit = 1;
   struct timespec start;
   struct timespec now;
-  uint8_t bit = 1;
+
+  // Start the read slot.
   lgGpioWrite(handle, gpio, 0);
   microDelay(1);
   lgGpioWrite(handle, gpio, 1);
 
-  // Poll the pin for 60us to see if it goes low.
+  // Poll for 60us to see if pin goes low.
   clock_gettime(CLOCK_MONOTONIC, &start);
   now = start;
   while(nanoDiff(&now, &start) < 60000){
     if (lgGpioRead(handle, gpio) == 0) bit = 0;
     clock_gettime(CLOCK_MONOTONIC, &now);
   }
-  return bit;
+  return UINT2NUM(bit);
 }
 
-static void one_wire_bit_write(int handle, int gpio, uint8_t bit) {
-  // Write slot always starts with pulling the bus low for at least 1us.
+static VALUE one_wire_bit_write(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbBit) {
+  int handle  = NUM2INT(rbHandle);
+  int gpio    = NUM2INT(rbGPIO);
+  uint8_t bit = NUM2CHR(rbBit);
+
+  // Write slot starts by going low for at least 1us.
   lgGpioWrite(handle, gpio, 0);
   microDelay(1);
 
@@ -564,9 +572,9 @@ static void one_wire_bit_write(int handle, int gpio, uint8_t bit) {
     lgGpioWrite(handle, gpio, 1);
     microDelay(59);
   }
-
   // Minimum 1us recovery time after each slot.
   microDelay(1);
+  return Qnil;
 }
 
 static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
@@ -588,96 +596,6 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
   }
 
   return UINT2NUM(presence);
-}
-
-static VALUE one_wire_search(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbMask) {
-  int handle    = NUM2INT(rbHandle);
-  int gpio      = NUM2INT(rbGPIO);
-  uint64_t mask = NUM2ULL(rbMask);
-  uint64_t addr = 0;
-  uint64_t comp = 0;
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 1);
-
-  for (int i=0; i<64; i++) {
-    bitWriteU64(&addr, i, one_wire_bit_read(handle, gpio));
-    bitWriteU64(&comp, i, one_wire_bit_read(handle, gpio));
-
-    // Any mask bit set to 1 says we're searching a branch with that bit set to 1,
-    // and must force it to be 1 on this pass. Write 1 to both the address bit and the bus.
-    //
-    // We also do not change the complement bit from 0, Even though the bus
-    // said 0/0, we are sending back 1/0, hiding discrepancies we are testing,
-    // only sending those that appeared this time, which is what we care about.
-    //
-    if(bitReadU64(&mask, i) == 1){
-      one_wire_bit_write(handle, gpio, 1);
-      bitWriteU64(&addr, i, 1);
-      // bitWriteU64(&comp, i, 0);
-
-    // Whether there was no "1-branch" marked for this bit, or there is no
-    // discrepancy at all, just echo address bit to the bus. We compare
-    // addr/comp remotely to find discrepancies for future passes.
-    //
-    } else {
-      one_wire_bit_write(handle, gpio, bitReadU64(&addr, i));
-    }
-  }
-
-  // Return an array of 16 bytes, address and complement bytes interleaved LSBFIRST.
-  VALUE retArray = rb_ary_new2(16);
-  for(int i=0; i<8; i++){
-    rb_ary_store(retArray, i*2,   UINT2NUM(addr & 0b11111111));
-    rb_ary_store(retArray, i*2+1, UINT2NUM(comp & 0b11111111));
-    addr >>= 8;
-    comp >>= 8;
-  }
-  return retArray;
-}
-
-static VALUE one_wire_read(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rxCount) {
-  int handle = NUM2INT(rbHandle);
-  int gpio   = NUM2INT(rbGPIO);
-  int count  = NUM2INT(rxCount);
-  uint8_t rxBuf[count];
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 1);
-
-  // Read bits into C array.
-  for(int i=0; i<count; i++){
-    rxBuf[i] = 0b00000000;
-    for(int j=0; j<8; j++){
-      bitWriteU8(&rxBuf[i], j, one_wire_bit_read(handle, gpio));
-    }
-  }
-
-  // Return Ruby array.
-  VALUE retArray = rb_ary_new2(count);
-  for(int i=0; i<count; i++){
-    rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
-  }
-  return retArray;
-}
-
-static VALUE one_wire_write(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbParasite, VALUE txArray) {
-  int handle       = NUM2INT(rbHandle);
-  int gpio         = NUM2INT(rbGPIO);
-  uint8_t parasite = NUM2CHR(rbParasite);
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, gpio, 1);
-
-  // Go through array and send every bit.
-  int count = RARRAY_LEN(txArray);
-  VALUE rbByte;
-  uint8_t cByte;
-  for(int i=0; i<count; i++){
-    rbByte = rb_ary_entry(txArray, i);
-    Check_Type(rbByte, T_FIXNUM);
-    cByte = NUM2CHR(rbByte);
-    for(int j=0; j<8; j++){
-      one_wire_bit_write(handle, gpio, bitReadU8(&cByte, j));
-    }
-  }
-
-  // Drive bus high to feed the parasite capacitor after writing if necessary.
-  if (parasite) lgGpioWrite(handle, gpio, 1);
 }
 
 /*****************************************************************************/
@@ -915,10 +833,9 @@ void Init_lgpio(void) {
   rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 3);
 
   // Bit-banged 1-Wire
-  rb_define_singleton_method(mLGPIO, "one_wire_reset",  one_wire_reset,  2);
-  rb_define_singleton_method(mLGPIO, "one_wire_search", one_wire_search, 3);
-  rb_define_singleton_method(mLGPIO, "one_wire_read",   one_wire_read,   3);
-  rb_define_singleton_method(mLGPIO, "one_wire_write",  one_wire_write,  4);
+  rb_define_singleton_method(mLGPIO, "one_wire_bit_read",   one_wire_bit_read,  2);
+  rb_define_singleton_method(mLGPIO, "one_wire_bit_write",  one_wire_bit_write, 3);
+  rb_define_singleton_method(mLGPIO, "one_wire_reset",      one_wire_reset,     2);
 
   // Bit-banged I2C
   rb_define_singleton_method(mLGPIO, "i2c_bb_claim",    i2c_bb_claim,    3);

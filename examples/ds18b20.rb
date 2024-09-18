@@ -2,23 +2,25 @@ require 'lgpio'
 
 GPIO_CHIP = 0
 PIN       = 256
-PARASITE  = 0
+PARASITE  = false
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.one_wire_reset(chip_handle, PIN)
+one_wire = LGPIO::OneWire.new(chip_handle, PIN)
+
+one_wire.reset
 # Skip ROM
-LGPIO.one_wire_write(chip_handle, PIN, PARASITE, [0xCC])
+one_wire.write([0xCC], parasite: PARASITE)
 # Start conversion
-LGPIO.one_wire_write(chip_handle, PIN, PARASITE, [0x44])
+one_wire.write([0x44], parasite: PARASITE)
 # Wait for conversion
 sleep(1)
 # Reset
-LGPIO.one_wire_reset(chip_handle, PIN)
+one_wire.reset
 # Skip ROM
-LGPIO.one_wire_write(chip_handle, PIN, PARASITE, [0xCC])
+one_wire.write([0xCC], parasite: PARASITE)
 # Read 9 bytes from scratchpad
-LGPIO.one_wire_write(chip_handle, PIN, PARASITE, [0xBE])
-bytes = LGPIO.one_wire_read(chip_handle, PIN, 9)
+one_wire.write([0xBE], parasite: PARASITE)
+bytes = one_wire.read(9)
 
 # Temperature is the first 16 bits (2 bytes of 9 read).
 # It's a signed, 2's complement, little-endian decimal. LSB = 2 ^ -4.
