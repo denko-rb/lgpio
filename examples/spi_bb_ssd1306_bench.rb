@@ -43,7 +43,7 @@ LGPIO.chip_close(chip_handle)
 
 fps = FRAME_COUNT / (finish - start)
 # Also calculate C calls per second, using roughly 20 calls per byte written.
-data_calls = START_ARRAY.length + ((PATTERN_1.length + PATTERN_2.length) / 2) * 20
+data_calls = (START_ARRAY.length + (PATTERN_1.length + PATTERN_2.length) / 2) * 20
 # Add DC, SELECT and clock idle calls.
 total_calls  = data_calls + 8
 cps = ((total_calls * fps) / 1000.0).round
