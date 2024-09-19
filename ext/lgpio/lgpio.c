@@ -506,32 +506,8 @@ static VALUE spi_ws2812_write(VALUE self, VALUE handle, VALUE pixelArray){
 }
 
 /*****************************************************************************/
-/*                                 ONE WIRE                                  */
+/*                       BIT BANG 1-WIRE HEPERS                              */
 /*****************************************************************************/
-static uint8_t bitReadU64(uint64_t* b, uint8_t i) {
-  return ((*b >> i) & 0b1);
-}
-
-static void bitWriteU64(uint64_t* b, uint8_t i, uint8_t v) {
-  if (v == 0) {
-    *b &= ~(1ULL << i);
-  } else {
-    *b |=  (1ULL << i);
-  }
-}
-
-static uint8_t bitReadU8(uint8_t* b, uint8_t i) {
-  return (*b >> i) & 0b1;
-}
-
-static void bitWriteU8(uint8_t* b, uint8_t i, uint8_t v) {
-  if (v == 0) {
-    *b &= ~(1 << i);
-  } else {
-    *b |=  (1 << i);
-  }
-}
-
 static VALUE one_wire_bit_read(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
   int handle  = NUM2INT(rbHandle);
   int gpio    = NUM2INT(rbGPIO);
@@ -596,167 +572,6 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
   }
 
   return UINT2NUM(presence);
-}
-
-/*****************************************************************************/
-/*                            BIT-BANG I2C                                   */
-/*****************************************************************************/
-static uint8_t sdaState = 1;
-
-static void i2c_bb_set_sda(int handle, int sda, uint8_t level) {
-  if (level == sdaState) return;
-  lgGpioWrite(handle, sda, level);
-  sdaState = level;
-}
-
-// Start condition is SDA then SCL going low, from both high.
-static void i2c_bb_start(int handle, int scl, int sda) {
-  lgGpioWrite(handle, sda, 0);
-  lgGpioWrite(handle, scl, 0);
-}
-
-// Stop condition is SDA going high, while SCL is also high.
-static void i2c_bb_stop(int handle, int scl, int sda) {
-  lgGpioWrite(handle, sda, 0);
-  lgGpioWrite(handle, scl, 1);
-  lgGpioWrite(handle, sda, 1);
-}
-
-static uint8_t i2c_bb_read_bit(int handle, int scl, int sda) {
-  uint8_t bit;
-  // Ensure SDA high before we pull SCL high.
-  i2c_bb_set_sda(handle, sda, 1);
-  lgGpioWrite(handle, scl, 1);
-  bit = lgGpioRead(handle, sda);
-  lgGpioWrite(handle, scl, 0);
-  return bit;
-}
-
-static void i2c_bb_write_bit(int handle, int scl, int sda, uint8_t bit) {
-  // Set SDA while SCL is low.
-  i2c_bb_set_sda(handle, sda, bit);
-  lgGpioWrite(handle, scl, 1);
-  lgGpioWrite(handle, scl, 0);
-}
-
-static uint8_t i2c_bb_read_byte(int handle, int scl, int sda, bool ack) {
-  uint8_t b;
-
-  // Receive MSB first.
-  for (int i=7; i>=0; i--) bitWriteU8(&b, i, i2c_bb_read_bit(handle, scl, sda));
-
-  // Send ACK or NACK and return byte.
-  if (ack) {
-    i2c_bb_write_bit(handle, scl, sda, 0);
-  } else {
-    i2c_bb_write_bit(handle, scl, sda, 1);
-  }
-  return b;
-}
-
-static int i2c_bb_write_byte(int handle, int scl, int sda, uint8_t b) {
-  // Send MSB first.
-  for (int i=7; i>=0; i--) i2c_bb_write_bit(handle, scl, sda, bitReadU8(&b, i));
-
-  // Return -1 for NACK, 0 for ACK.
-  return (i2c_bb_read_bit(handle, scl, sda) == 0) ? 0 : -1;
-}
-
-static VALUE i2c_bb_claim(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA) {
-  int handle = NUM2INT(rbHandle);
-  int scl    = NUM2INT(rbSCL);
-  int sda    = NUM2INT(rbSDA);
-
-  // SCL is a driven output. SDA is open drain with pullup enabled.
-  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, scl, 1);
-  lgGpioClaimOutput(handle, LG_SET_OPEN_DRAIN | LG_SET_PULL_UP, sda, 1);
-}
-
-static VALUE i2c_bb_search(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA) {
-  int handle = NUM2INT(rbHandle);
-  int scl    = NUM2INT(rbSCL);
-  int sda    = NUM2INT(rbSDA);
-  int ack;
-  uint8_t present[128];
-  uint8_t presentCount = 0;
-  sdaState = 1;
-
-  // Only addresses from 0x08 to 0x77 are usable (8 to 127).
-  for (uint8_t addr = 0x08; addr < 0x78;  addr++) {
-    i2c_bb_start(handle, scl, sda);
-    ack = i2c_bb_write_byte(handle, scl, sda, ((addr << 1) & 0b11111110));
-    i2c_bb_stop(handle, scl, sda);
-    if (ack == 0){
-      present[addr] = 1;
-      presentCount++;
-    } else {
-      present[addr] = 0;
-    }
-  }
-  if (presentCount == 0) return Qnil;
-
-  VALUE retArray = rb_ary_new2(presentCount);
-  uint8_t i = 0;
-  for (uint8_t addr = 0x08; addr < 0x78;  addr++) {
-    if (present[addr] == 1) {
-      rb_ary_store(retArray, i, UINT2NUM(addr));
-      i++;
-    }
-  }
-  return retArray;
-}
-
-static VALUE i2c_bb_write(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, VALUE rbAddress, VALUE txArray) {
-  int handle = NUM2INT(rbHandle);
-  int scl    = NUM2INT(rbSCL);
-  int sda    = NUM2INT(rbSDA);
-  uint8_t address      = NUM2CHR(rbAddress);
-  uint8_t writeAddress = (address << 1);
-  sdaState = 1;
-
-  int count = RARRAY_LEN(txArray);
-  uint8_t txBuf[count];
-  VALUE currentByte;
-  for(int i=0; i<count; i++){
-    currentByte = rb_ary_entry(txArray, i);
-    Check_Type(currentByte, T_FIXNUM);
-    txBuf[i] = NUM2CHR(currentByte);
-  }
-
-  i2c_bb_start(handle, scl, sda);
-  i2c_bb_write_byte(handle, scl, sda, writeAddress);
-  for (int i=0; i<count; i++) i2c_bb_write_byte(handle, scl, sda, txBuf[i]);
-  i2c_bb_stop(handle, scl, sda);
-}
-
-static VALUE i2c_bb_read(VALUE self, VALUE rbHandle, VALUE rbSCL, VALUE rbSDA, VALUE rbAddress, VALUE rbCount) {
-  int handle = NUM2INT(rbHandle);
-  int scl    = NUM2INT(rbSCL);
-  int sda    = NUM2INT(rbSDA);
-  uint8_t address      = NUM2CHR(rbAddress);
-  uint8_t readAddress  = (address << 1) | 0b00000001;
-  sdaState = 1;
-
-  int count = NUM2INT(rbCount);
-  uint8_t rxBuf[count];
-
-  i2c_bb_start(handle, scl, sda);
-  int ack = i2c_bb_write_byte(handle, scl, sda, readAddress);
-  // Device with this address not present on the bus.
-  if (ack != 0) return Qnil;
-
-  // Read and ACK for all but the last byte.
-  int pos = 0;
-  while(pos < count-1) {
-    rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, true);
-    pos++;
-  }
-  rxBuf[pos] = i2c_bb_read_byte(handle, scl, sda, false);
-  i2c_bb_stop(handle, scl, sda);
-
-  VALUE retArray = rb_ary_new2(count);
-  for(int i=0; i<count; i++) rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
-  return retArray;
 }
 
 /*****************************************************************************/
@@ -832,14 +647,8 @@ void Init_lgpio(void) {
   VALUE cHardwarePWM = rb_define_class_under(mLGPIO, "HardwarePWM", rb_cObject);
   rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 3);
 
-  // Bit-banged 1-Wire
+  // Bit-bang 1-Wire Helpers
   rb_define_singleton_method(mLGPIO, "one_wire_bit_read",   one_wire_bit_read,  2);
   rb_define_singleton_method(mLGPIO, "one_wire_bit_write",  one_wire_bit_write, 3);
   rb_define_singleton_method(mLGPIO, "one_wire_reset",      one_wire_reset,     2);
-
-  // Bit-banged I2C
-  rb_define_singleton_method(mLGPIO, "i2c_bb_claim",    i2c_bb_claim,    3);
-  rb_define_singleton_method(mLGPIO, "i2c_bb_search",   i2c_bb_search,   3);
-  rb_define_singleton_method(mLGPIO, "i2c_bb_write",    i2c_bb_write,    5);
-  rb_define_singleton_method(mLGPIO, "i2c_bb_read",     i2c_bb_read,     5);
 }

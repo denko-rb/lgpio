@@ -5,9 +5,8 @@ SCL_PIN   = 228
 SDA_PIN   = 270
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.i2c_bb_claim(chip_handle, SCL_PIN, SDA_PIN)
-
-devices = LGPIO.i2c_bb_search(chip_handle, SCL_PIN, SDA_PIN)
+i2c_bb = LGPIO::I2CBitBang.new(chip_handle, SCL_PIN, SDA_PIN)
+devices = i2c_bb.search
 
 if devices.empty?
   puts "No devices found on I2C bus"
