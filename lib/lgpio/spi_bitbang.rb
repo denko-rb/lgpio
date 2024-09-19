@@ -16,6 +16,10 @@ module LGPIO
       initialize_pins
     end
 
+    def config
+      @config ||= { handle: handle, clock: clock, input: input, output: output }
+    end
+
     def initialize_pins
       LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, clock, LGPIO::LOW)
       LGPIO.gpio_claim_input(handle, LGPIO::SET_PULL_NONE, input) if input
