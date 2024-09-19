@@ -4,8 +4,8 @@ Gem::Specification.new do |s|
   s.name        = 'lgpio'
   s.version     = LGPIO::VERSION
   s.licenses    = ['MIT']
-  s.summary     = "lgpio (lg) bindings for Ruby"
-  s.description = "Use GPIO / PWM / I2C / SPI / UART on Linux SBCs in Ruby"
+  s.summary     = "Use Linux GPIO, I2C, SPI and PWM in Ruby"
+  s.description = "Use Linux GPIO, I2C, SPI and PWM in Ruby"
 
   s.authors     = ["vickash"]
   s.email       = 'mail@vickash.com'
