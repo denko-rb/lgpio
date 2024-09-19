@@ -89,8 +89,9 @@ module LGPIO
       else
         raise ArgumentError, "invalid SPI mode: #{mode} given"
       end
+      raise ArgumentError, "invalid Array for write: #{write}" unless write.kind_of?(Array)
+      raise ArgumentError, "invalid Integer for read: #{read}" unless read.kind_of?(Integer)
 
-      # Should validate read: and write: here.
       read_bytes = (read > 0) ? [] : nil
       LGPIO.gpio_write(handle, select, 0) if select
 

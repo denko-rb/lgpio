@@ -1,5 +1,7 @@
 module LGPIO
   class I2CBitBang
+    VALID_ADDRESSES = (0x08..0x77).to_a
+
     attr_reader :handle, :scl, :sda
 
     def initialize(handle, scl, sda)
@@ -74,14 +76,17 @@ module LGPIO
       (read_bit == 0)
     end
 
-    def read(address, count)
+    def read(address, length)
+      raise ArgumentError, "invalid I2C address: #{address}. Range is 0x08..0x77" unless VALID_ADDRESSES.include?(address)
+      raise ArgumentError, "invalid Integer for read length: #{length}" unless length.kind_of?(Integer)
+
       start
       ack = write_byte(read_form(address))
       return nil unless ack
 
-      # Read count bytes, and ACK for all but the last one.
+      # Read length bytes, and ACK for all but the last one.
       bytes = []
-      (count-1).times { bytes << read_byte(true) }
+      (length-1).times { bytes << read_byte(true) }
       bytes << read_byte(false)
       stop
 
@@ -89,6 +94,9 @@ module LGPIO
     end
 
     def write(address, bytes)
+      raise ArgumentError, "invalid I2C address: #{address}. Range is 0x08..0x77" unless VALID_ADDRESSES.include?(address)
+      raise ArgumentError, "invalid byte Array to write: #{bytes}" unless bytes.kind_of?(Array)
+
       start
       write_byte(write_form(address))
       bytes.each { |byte| write_byte(byte) }
@@ -97,7 +105,7 @@ module LGPIO
 
     def search
       found = []
-      (0x08..0x77).each do |address|
+      VALID_ADDRESSES.each do |address|
         start
         # Device present if ACK received when we write its address to the bus.
         found << address if write_byte(write_form(address))
