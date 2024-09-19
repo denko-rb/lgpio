@@ -1,8 +1,8 @@
 require 'lgpio'
 
 GPIO_CHIP   = 0
-CLOCK_PIN   = 22
-INPUT_PIN   = 17
+CLOCK_PIN   = 17
+INPUT_PIN   = 22
 OUTPUT_PIN  = 27
 
 # Emulate data sent over I2C to a SSD1306 OLED, prepending its write address.
