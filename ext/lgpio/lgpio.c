@@ -3,13 +3,19 @@
 #include <stdio.h>
 #include <time.h>
 
-// Set up a queue for up to 2**16 GPIO reports.
+/*****************************************************************************/
+/*                           GPIO REPORT QUEUE                               */
+/*****************************************************************************/
 static pthread_mutex_t queueLock;
+// Set up a queue for up to 2**16 GPIO reports.
 #define QUEUE_LENGTH UINT16_MAX + 1
 static lgGpioReport_t reportQueue[QUEUE_LENGTH];
 static uint16_t qWritePos = 1;
 static uint16_t qReadPos  = 0;
 
+/*****************************************************************************/
+/*                             TIMING HELPERS                                */
+/*****************************************************************************/
 static uint64_t nanoDiff(const struct timespec *event2, const struct timespec *event1) {
   uint64_t event2_ns = (uint64_t)event2->tv_sec * 1000000000LL + event2->tv_nsec;
   uint64_t event1_ns = (uint64_t)event1->tv_sec * 1000000000LL + event1->tv_nsec;
@@ -36,6 +42,9 @@ static void microDelay(uint64_t micros) {
   nanoDelay(micros * 1000);
 }
 
+/*****************************************************************************/
+/*                              CHIP & GPIO                                 */
+/*****************************************************************************/
 static VALUE chip_open(VALUE self, VALUE gpio_dev) {
   int result = lgGpiochipOpen(NUM2INT(gpio_dev));
   return INT2NUM(result);
@@ -162,103 +171,9 @@ static VALUE gpio_get_report(VALUE self){
   return (popped) ? hash : Qnil;
 }
 
-static VALUE gpio_read_ultrasonic(VALUE self, VALUE rbHandle, VALUE rbTrigger, VALUE rbEcho, VALUE rbTriggerTime) {
-  int handle            = NUM2UINT(rbHandle);
-  int trigger           = NUM2UINT(rbTrigger);
-  int echo              = NUM2UINT(rbEcho);
-  uint32_t triggerTime  = NUM2UINT(rbTriggerTime);
-  struct timespec start;
-  struct timespec now;
-  bool echoSeen = false;
-
-  // Pull down avoids false readings if disconnected.
-  lgGpioClaimInput(handle, LG_SET_PULL_DOWN, echo);
-
-  // Initial pulse on the triger pin.
-  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, trigger, 0);
-  microDelay(5);
-  lgGpioWrite(handle, trigger, 1);
-  microDelay(triggerTime);
-  lgGpioWrite(handle, trigger, 0);
-
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  now = start;
-
-  // Wait for echo to go high, up to 25,000 us after trigger.
-  while(nanoDiff(&now, &start) < 25000000){
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (lgGpioRead(handle, echo) == 1) {
-      echoSeen = true;
-      start = now;
-      break;
-    }
-  }
-  if (!echoSeen) return Qnil;
-
-  // Wait for echo to go low again, up to 25,000 us after echo start.
-  while(nanoDiff(&now, &start) < 25000000){
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (lgGpioRead(handle, echo) == 0) break;
-  }
-
-  // High pulse time in microseconds.
-  return INT2NUM(round(nanoDiff(&now, &start) / 1000.0));
-}
-
-static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbReset_us, VALUE rbResetLevel, VALUE rbLimit, VALUE rbTimeout_ms) {
-  // C values
-  int handle          = NUM2INT(rbHandle);
-  int gpio            = NUM2INT(rbGPIO);
-  uint32_t reset_us   = NUM2UINT(rbReset_us);
-  uint8_t  resetLevel = NUM2UINT(rbResetLevel);
-  uint32_t limit      = NUM2UINT(rbLimit);
-  uint64_t timeout_ns = NUM2UINT(rbTimeout_ms) * 1000000;
-
-  // State setup
-  uint64_t pulses_ns[limit];
-  uint32_t pulseIndex = 0;
-  int      gpioState;
-  struct timespec start;
-  struct timespec lastPulse;
-  struct timespec now;
-
-  // Perform reset
-  if (reset_us > 0) {
-    int result = lgGpioClaimOutput(handle, LG_SET_PULL_NONE, gpio, resetLevel);
-    if (result < 0) return NUM2INT(result);
-    microDelay(reset_us);
-  }
-
-  // Initialize timing
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  lastPulse = start;
-  now       = start;
-
-  // Switch to input and read initial state
-  lgGpioClaimInput(handle, LG_SET_PULL_NONE, gpio);
-  gpioState = lgGpioRead(handle, gpio);
-
-  // Read pulses in nanoseconds
-  while ((nanoDiff(&now, &start) < timeout_ns) && (pulseIndex < limit)) {
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (lgGpioRead(handle, gpio) != gpioState) {
-      pulses_ns[pulseIndex] = nanoDiff(&now, &lastPulse);
-      lastPulse = now;
-      gpioState = gpioState ^ 0b1;
-      pulseIndex++;
-    }
-  }
-
-  // Return Ruby array of pulse as microseconds
-  if (pulseIndex == 0) return Qnil;
-  VALUE retArray = rb_ary_new2(pulseIndex);
-  for(int i=0; i<pulseIndex; i++){
-    uint32_t pulse_us = round(pulses_ns[i] / 1000.0);
-    rb_ary_store(retArray, i, UINT2NUM(pulse_us));
-  }
-  return retArray;
-}
-
+/*****************************************************************************/
+/*                          SOFTWARE PWM & WAVE                              */
+/*****************************************************************************/
 static VALUE tx_busy(VALUE self, VALUE handle, VALUE gpio, VALUE kind) {
   int result = lgTxBusy(NUM2INT(handle), NUM2INT(gpio), NUM2INT(kind));
   return INT2NUM(result);
@@ -302,6 +217,9 @@ static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
   return INT2NUM(result);
 }
 
+/*****************************************************************************/
+/*                        HARDWARE PWM OOK WAVE                              */
+/*****************************************************************************/
 static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pulses) {
   // NOTE: This uses hardware PWM, NOT the lgpio software PWM/wave interface.
   // The Ruby class LGPIO::HardwarePWM should have already set the PWM carrier frequency.
@@ -343,6 +261,9 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
   fclose(dutyFile);
 }
 
+/*****************************************************************************/
+/*                             HARDWARE I2C                                  */
+/*****************************************************************************/
 static VALUE i2c_open(VALUE self, VALUE i2cDev, VALUE i2cAddr, VALUE i2cFlags){
   int handle = lgI2cOpen(NUM2INT(i2cDev), NUM2INT(i2cAddr), NUM2INT(i2cFlags));
   return INT2NUM(handle);
@@ -406,6 +327,9 @@ static VALUE i2c_zip(VALUE self, VALUE handle, VALUE txArray, VALUE rb_rxCount){
   return retArray;
 }
 
+/*****************************************************************************/
+/*                             HARDWARE SPI                                  */
+/*****************************************************************************/
 static VALUE spi_open(VALUE self, VALUE spiDev, VALUE spiChan, VALUE spiBaud, VALUE spiFlags){
   int handle = lgSpiOpen(NUM2INT(spiDev), NUM2INT(spiChan), NUM2INT(spiBaud), NUM2INT(spiFlags));
   return INT2NUM(handle);
@@ -503,6 +427,106 @@ static VALUE spi_ws2812_write(VALUE self, VALUE handle, VALUE pixelArray){
 
   int result = lgSpiWrite(NUM2INT(handle), txBuf, txBufLength);
   return INT2NUM(result);
+}
+
+/*****************************************************************************/
+/*                           BIT-BANG PULSE INPUT                            */
+/*****************************************************************************/
+static VALUE gpio_read_ultrasonic(VALUE self, VALUE rbHandle, VALUE rbTrigger, VALUE rbEcho, VALUE rbTriggerTime) {
+  int handle            = NUM2UINT(rbHandle);
+  int trigger           = NUM2UINT(rbTrigger);
+  int echo              = NUM2UINT(rbEcho);
+  uint32_t triggerTime  = NUM2UINT(rbTriggerTime);
+  struct timespec start;
+  struct timespec now;
+  bool echoSeen = false;
+
+  // Pull down avoids false readings if disconnected.
+  lgGpioClaimInput(handle, LG_SET_PULL_DOWN, echo);
+
+  // Initial pulse on the triger pin.
+  lgGpioClaimOutput(handle, LG_SET_PULL_NONE, trigger, 0);
+  microDelay(5);
+  lgGpioWrite(handle, trigger, 1);
+  microDelay(triggerTime);
+  lgGpioWrite(handle, trigger, 0);
+
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  now = start;
+
+  // Wait for echo to go high, up to 25,000 us after trigger.
+  while(nanoDiff(&now, &start) < 25000000){
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (lgGpioRead(handle, echo) == 1) {
+      echoSeen = true;
+      start = now;
+      break;
+    }
+  }
+  if (!echoSeen) return Qnil;
+
+  // Wait for echo to go low again, up to 25,000 us after echo start.
+  while(nanoDiff(&now, &start) < 25000000){
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (lgGpioRead(handle, echo) == 0) break;
+  }
+
+  // High pulse time in microseconds.
+  return INT2NUM(round(nanoDiff(&now, &start) / 1000.0));
+}
+
+static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE rbReset_us, VALUE rbResetLevel, VALUE rbLimit, VALUE rbTimeout_ms) {
+  // C values
+  int handle          = NUM2INT(rbHandle);
+  int gpio            = NUM2INT(rbGPIO);
+  uint32_t reset_us   = NUM2UINT(rbReset_us);
+  uint8_t  resetLevel = NUM2UINT(rbResetLevel);
+  uint32_t limit      = NUM2UINT(rbLimit);
+  uint64_t timeout_ns = NUM2UINT(rbTimeout_ms) * 1000000;
+
+  // State setup
+  uint64_t pulses_ns[limit];
+  uint32_t pulseIndex = 0;
+  int      gpioState;
+  struct timespec start;
+  struct timespec lastPulse;
+  struct timespec now;
+
+  // Perform reset
+  if (reset_us > 0) {
+    int result = lgGpioClaimOutput(handle, LG_SET_PULL_NONE, gpio, resetLevel);
+    if (result < 0) return NUM2INT(result);
+    microDelay(reset_us);
+  }
+
+  // Initialize timing
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  lastPulse = start;
+  now       = start;
+
+  // Switch to input and read initial state
+  lgGpioClaimInput(handle, LG_SET_PULL_NONE, gpio);
+  gpioState = lgGpioRead(handle, gpio);
+
+  // Read pulses in nanoseconds
+  while ((nanoDiff(&now, &start) < timeout_ns) && (pulseIndex < limit)) {
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (lgGpioRead(handle, gpio) != gpioState) {
+      pulses_ns[pulseIndex] = nanoDiff(&now, &lastPulse);
+      lastPulse = now;
+      gpioState = gpioState ^ 0b1;
+      pulseIndex++;
+    }
+  }
+
+  // Return Ruby array of pulse as microseconds
+  if (pulseIndex == 0) return Qnil;
+  VALUE retArray = rb_ary_new2(pulseIndex);
+  for(int i=0; i<pulseIndex; i++){
+    uint32_t pulse_us = round(pulses_ns[i] / 1000.0);
+    rb_ary_store(retArray, i, UINT2NUM(pulse_us));
+  }
+  return retArray;
 }
 
 /*****************************************************************************/
@@ -613,10 +637,6 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "gpio_start_reporting",  gpio_start_reporting,  0);
   rb_define_singleton_method(mLGPIO, "gpio_get_report",       gpio_get_report,       0);
 
-  // Pulse Input
-  rb_define_singleton_method(mLGPIO, "gpio_read_ultrasonic",  gpio_read_ultrasonic,  4);
-  rb_define_singleton_method(mLGPIO, "gpio_read_pulses_us",   gpio_read_pulses_us,   6);
-
   // Soft PWM / Wave
   rb_define_const(mLGPIO, "TX_PWM", INT2NUM(LG_TX_PWM));
   rb_define_const(mLGPIO, "TX_WAVE",INT2NUM(LG_TX_WAVE));
@@ -627,6 +647,10 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "tx_wave",  tx_wave,  3);
   // Don't use this. Servo will jitter.
   rb_define_singleton_method(mLGPIO, "tx_servo", tx_servo, 6);
+
+  // Hardware PWM waves for on-off-keying.
+  VALUE cHardwarePWM = rb_define_class_under(mLGPIO, "HardwarePWM", rb_cObject);
+  rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 3);
 
   // I2C
   rb_define_singleton_method(mLGPIO, "i2c_open",           i2c_open,          3);
@@ -643,9 +667,9 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "spi_xfer",           spi_xfer,          2);
   rb_define_singleton_method(mLGPIO, "spi_ws2812_write",   spi_ws2812_write,  2);
 
-  // Hardware PWM waves for on-off-keying.
-  VALUE cHardwarePWM = rb_define_class_under(mLGPIO, "HardwarePWM", rb_cObject);
-  rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 3);
+  // Bit-Bang Pulse Input
+  rb_define_singleton_method(mLGPIO, "gpio_read_ultrasonic",  gpio_read_ultrasonic,  4);
+  rb_define_singleton_method(mLGPIO, "gpio_read_pulses_us",   gpio_read_pulses_us,   6);
 
   // Bit-bang 1-Wire Helpers
   rb_define_singleton_method(mLGPIO, "one_wire_bit_read",   one_wire_bit_read,  2);
