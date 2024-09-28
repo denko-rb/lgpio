@@ -25,8 +25,6 @@ pins.each_value do |hash|
   end
 end
 
-puts pins.inspect
-
 spi_bb = LGPIO::SPIBitBang.new(clock: pins[:clock], output: pins[:output])
 LGPIO.gpio_claim_output(pins[:reset][:handle], pins[:reset][:line], LGPIO::SET_PULL_NONE, LGPIO::LOW)
 LGPIO.gpio_claim_output(pins[:dc][:handle], pins[:dc][:line], LGPIO::SET_PULL_NONE, LGPIO::LOW)
