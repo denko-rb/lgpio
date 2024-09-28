@@ -1,16 +1,24 @@
 module LGPIO
   class SPIBitBang
-    attr_reader :handle, :clock, :input, :output
+    attr_reader :clock_handle, :input_handle, :output_handle
+    attr_reader :clock_line, :input_line, :output_line
 
     def initialize(options={})
-      @handle = options[:handle]
-      @clock  = options[:clock]  || options[:sck]  || options[:clk]
-      @input  = options[:input]  || options[:poci] || options[:miso]
-      @output = options[:output] || options[:pico] || options[:mosi]
+      clock  = options[:clock]
+      input  = options[:input]
+      output = options[:output]
 
-      raise ArgumentError, "a gpiochip :handle is required" unless @handle
-      raise ArgumentError, "either input/:poci/:miso OR :output/:pico/:mosi pin required" unless (@input || @output)
-      raise ArgumentError, ":clock/:sck/:clk pin required" unless @clock
+      @clock_handle   = clock[:handle] if clock
+      @clock_line     = clock[:line]   if clock
+      raise ArgumentError, ":clock pin required as Hash, with :handle and :line required" unless (@clock_handle && @clock_line)
+
+      @input_handle   = input[:handle]  if input
+      @input_line     = input[:line]    if input
+      @output_handle  = output[:handle] if output
+      @output_line    = output[:line]   if output
+      unless ((@input_handle && @input_line) || (@output_handle && @output_line))
+        raise ArgumentError, "either :input or :output pin required as Hash, with :handle and :line required"
+      end
 
       @output_state = nil
       initialize_pins
@@ -21,38 +29,38 @@ module LGPIO
     end
 
     def initialize_pins
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, clock, LGPIO::LOW)
-      LGPIO.gpio_claim_input(handle, LGPIO::SET_PULL_NONE, input) if input
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, output, LGPIO::LOW) if output
+      LGPIO.gpio_claim_output(clock_handle,  clock_line,  LGPIO::SET_PULL_NONE, LGPIO::LOW)
+      LGPIO.gpio_claim_input(input_handle,   input_line,  LGPIO::SET_PULL_NONE)             if input_line
+      LGPIO.gpio_claim_output(output_handle, output_line, LGPIO::SET_PULL_NONE, LGPIO::LOW) if output_line
     end
 
     def set_output(level)
       return if (level == @output_state)
-      LGPIO.gpio_write(handle, output, @output_state = level)
+      LGPIO.gpio_write(output_handle, output_line, @output_state = level)
     end
 
     def transfer_bit(write_bit, reading: false, mode: 0)
       case mode
       when 0
         set_output(write_bit) if write_bit
-        LGPIO.gpio_write(handle, clock, 1)
-        read_bit = LGPIO.gpio_read(handle, input) if reading
-        LGPIO.gpio_write(handle, clock, 0)
+        LGPIO.gpio_write(clock_handle, clock_line, 1)
+        read_bit = LGPIO.gpio_read(input_handle, input_line) if reading
+        LGPIO.gpio_write(clock_handle, clock_line, 0)
       when 1
-        LGPIO.gpio_write(handle, clock, 1)
+        LGPIO.gpio_write(clock_handle, clock_line, 1)
         set_output(write_bit) if write_bit
-        LGPIO.gpio_write(handle, clock, 0)
-        read_bit = LGPIO.gpio_read(handle, input) if reading
+        LGPIO.gpio_write(clock_handle, clock_line, 0)
+        read_bit = LGPIO.gpio_read(input_handle, input_line) if reading
       when 2
         set_output(write_bit) if write_bit
-        LGPIO.gpio_write(handle, clock, 0)
-        read_bit = LGPIO.gpio_read(handle, input) if reading
-        LGPIO.gpio_write(handle, clock, 1)
+        LGPIO.gpio_write(clock_handle, clock_line, 0)
+        read_bit = LGPIO.gpio_read(input_handle, input_line) if reading
+        LGPIO.gpio_write(clock_handle, clock_line, 1)
       when 3
-        LGPIO.gpio_write(handle, clock, 0)
+        LGPIO.gpio_write(clock_handle, clock_line, 0)
         set_output(write_bit) if write_bit
-        LGPIO.gpio_write(handle, clock, 1)
-        read_bit = LGPIO.gpio_read(handle, input) if reading
+        LGPIO.gpio_write(clock_handle, clock_line, 1)
+        read_bit = LGPIO.gpio_read(input_handle, input_line) if reading
       else
         raise ArgumentError, "invalid SPI mode: #{mode} given"
       end
@@ -87,9 +95,9 @@ module LGPIO
       # Idle clock state depends on SPI mode.
       case mode
       when 0..1
-        LGPIO.gpio_write(handle, clock, 0)
+        LGPIO.gpio_write(clock_handle, clock_line, 0)
       when 2..3
-        LGPIO.gpio_write(handle, clock, 1)
+        LGPIO.gpio_write(clock_handle, clock_line, 1)
       else
         raise ArgumentError, "invalid SPI mode: #{mode} given"
       end
@@ -97,7 +105,7 @@ module LGPIO
       raise ArgumentError, "invalid Integer for read: #{read}" unless read.kind_of?(Integer)
 
       read_bytes = (read > 0) ? [] : nil
-      LGPIO.gpio_write(handle, select, 0) if select
+      LGPIO.gpio_write(select[:handle], select[:line], 0) if select
 
       i = 0
       while (i < read) || (i < write.length)
@@ -106,7 +114,7 @@ module LGPIO
         i = i + 1
       end
 
-      LGPIO.gpio_write(handle, select, 1) if select
+      LGPIO.gpio_write(select[:handle], select[:line], 1) if select
       read_bytes
     end
   end

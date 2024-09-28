@@ -2,24 +2,32 @@ module LGPIO
   class I2CBitBang
     VALID_ADDRESSES = (0x08..0x77).to_a
 
-    attr_reader :handle, :scl, :sda
+    attr_reader :scl_handle, :scl_line, :sda_handle, :sda_line
 
-    def initialize(handle, scl, sda)
-      @handle = handle
-      @scl    = scl
-      @sda    = sda
-      @sda_state = nil
+    def initialize(options={})
+      scl  = options[:scl]
+      sda  = options[:sda]
+
+      @scl_handle = scl[:handle] if scl
+      @scl_line   = scl[:line]   if scl
+      raise ArgumentError, ":scl pin required as Hash, with :handle and :line required" unless (@scl_handle && @scl_line)
+
+      @sda_handle = sda[:handle] if sda
+      @sda_line   = sda[:line]   if sda
+      raise ArgumentError, ":sda pin required as Hash, with :handle and :line required" unless (@sda_handle && @sda_line)
+
+      @sda_state  = nil
       initialize_pins
     end
 
     def initialize_pins
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_PULL_NONE, scl, LGPIO::HIGH)
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, sda, LGPIO::HIGH)
+      LGPIO.gpio_claim_output(scl_handle, scl_line, LGPIO::SET_PULL_NONE, LGPIO::HIGH)
+      LGPIO.gpio_claim_output(sda_handle, sda_line, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, LGPIO::HIGH)
     end
 
     def set_sda(value)
       return if (@sda_state == value)
-      LGPIO.gpio_write(handle, sda, @sda_state = value)
+      LGPIO.gpio_write(sda_handle, sda_line, @sda_state = value)
     end
 
     def write_form(address)
@@ -31,28 +39,28 @@ module LGPIO
     end
 
     def start
-      LGPIO.gpio_write(handle, sda, 0)
-      LGPIO.gpio_write(handle, scl, 0)
+      LGPIO.gpio_write(sda_handle, sda_line, 0)
+      LGPIO.gpio_write(scl_handle, scl_line, 0)
     end
 
     def stop
-      LGPIO.gpio_write(handle, sda, 0)
-      LGPIO.gpio_write(handle, scl, 1)
-      LGPIO.gpio_write(handle, sda, 1)
+      LGPIO.gpio_write(sda_handle, sda_line, 0)
+      LGPIO.gpio_write(scl_handle, scl_line, 1)
+      LGPIO.gpio_write(sda_handle, sda_line, 1)
     end
 
     def read_bit
       set_sda(1)
-      LGPIO.gpio_write(handle, scl, 1)
-      bit = LGPIO.gpio_read(handle, sda)
-      LGPIO.gpio_write(handle, scl, 0)
+      LGPIO.gpio_write(scl_handle, scl_line, 1)
+      bit = LGPIO.gpio_read(sda_handle, sda_line)
+      LGPIO.gpio_write(scl_handle, scl_line, 0)
       bit
     end
 
     def write_bit(bit)
       set_sda(bit)
-      LGPIO.gpio_write(handle, scl, 1)
-      LGPIO.gpio_write(handle, scl, 0)
+      LGPIO.gpio_write(scl_handle, scl_line, 1)
+      LGPIO.gpio_write(scl_handle, scl_line, 0)
     end
 
     def read_byte(ack)

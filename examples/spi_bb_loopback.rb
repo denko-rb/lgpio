@@ -10,7 +10,12 @@ ORDERS      = [:msbfirst, :lsbfirst]
 TX_BYTES    = [0, 1, 2, 3, 4, 5, 6, 7]
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-spi_bb      = LGPIO::SPIBitBang.new(handle: chip_handle, clock: CLOCK_PIN, input: INPUT_PIN, output: OUTPUT_PIN)
+pin_hash    = {
+                clock:  { handle: chip_handle, line: CLOCK_PIN  },
+                input:  { handle: chip_handle, line: INPUT_PIN  },
+                output: { handle: chip_handle, line: OUTPUT_PIN },
+              }
+spi_bb      = LGPIO::SPIBitBang.new(pin_hash)
 
 puts "TX bytes => #{TX_BYTES.inspect}"
 
