@@ -5,7 +5,7 @@ PIN       = 260
 COUNT     = 1000000
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_UP, PIN)
+LGPIO.gpio_claim_input(chip_handle, PIN, LGPIO::SET_PULL_UP)
 
 t1 = Time.now
 COUNT.times do

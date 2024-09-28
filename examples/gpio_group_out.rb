@@ -7,7 +7,7 @@ INTERVAL    = 250_000 # 250ms
 TIMES       = 10
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.group_claim_output(chip_handle, LGPIO::SET_PULL_NONE, LEDS, INIT_STATE)
+LGPIO.group_claim_output(chip_handle, LEDS, LGPIO::SET_PULL_NONE, INIT_STATE)
 
 # Convert us interval to seconds.
 interval = INTERVAL.to_f / 1_000_000

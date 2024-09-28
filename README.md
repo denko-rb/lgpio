@@ -81,4 +81,10 @@ Even when these are enabled, you may not have permission to access them. To run 
   - Method names have the leading `lg` removed, since inside the `LGPIO` class.
   - Constants have leading `LG_` removed, as above.
   - "count" or "length" arguments associated with array args are not needed.
+  - Arg order for `_claim_` methods varies from lgpio C, so that gpio number always follows handle. The general pattern is `handle, gpio, flags, state`. This affects:
+    - `gpio_claim_input`
+    - `gpio_claim_output`
+    - `gpio_claim_alert`
+    - `group_claim_input`
+    - `group_claim_output`
 - Check the return values of your method calls. On failure, they return negative values, matching the `LG_` error codes at the bottom of the C API doc page.

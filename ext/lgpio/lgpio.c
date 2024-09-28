@@ -60,12 +60,12 @@ static VALUE gpio_get_mode(VALUE self, VALUE handle, VALUE gpio) {
   return INT2NUM(result);
 }
 
-static VALUE gpio_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpio, VALUE level) {
+static VALUE gpio_claim_output(VALUE self, VALUE handle, VALUE gpio, VALUE flags, VALUE level) {
   int result = lgGpioClaimOutput(NUM2INT(handle), NUM2INT(flags), NUM2INT(gpio), NUM2INT(level));
   return INT2NUM(result);
 }
 
-static VALUE gpio_claim_input(VALUE self, VALUE handle, VALUE flags, VALUE gpio) {
+static VALUE gpio_claim_input(VALUE self, VALUE handle, VALUE gpio, VALUE flags) {
   int result = lgGpioClaimInput(NUM2INT(handle), NUM2INT(flags), NUM2INT(gpio));
   return INT2NUM(result);
 }
@@ -85,7 +85,7 @@ static VALUE gpio_write(VALUE self, VALUE handle, VALUE gpio, VALUE level) {
   return INT2NUM(result);
 }
 
-static VALUE group_claim_input(VALUE self, VALUE handle, VALUE flags, VALUE gpios) {
+static VALUE group_claim_input(VALUE self, VALUE handle, VALUE gpios, VALUE flags) {
   int count = rb_array_len(gpios);
   int lgGpios[count];
   int i;
@@ -96,7 +96,7 @@ static VALUE group_claim_input(VALUE self, VALUE handle, VALUE flags, VALUE gpio
   return INT2NUM(result);
 }
 
-static VALUE group_claim_output(VALUE self, VALUE handle, VALUE flags, VALUE gpios, VALUE levels) {
+static VALUE group_claim_output(VALUE self, VALUE handle, VALUE gpios, VALUE flags, VALUE levels) {
   int count = rb_array_len(gpios);
   int lgGpios[count];
   int lgLevels[count];
@@ -130,7 +130,7 @@ static VALUE gpio_set_debounce(VALUE self, VALUE handle, VALUE gpio, VALUE debou
   return INT2NUM(result);
 }
 
-static VALUE gpio_claim_alert(VALUE self, VALUE handle, VALUE flags, VALUE eFlags, VALUE gpio) {
+static VALUE gpio_claim_alert(VALUE self, VALUE handle, VALUE gpio, VALUE flags, VALUE eFlags) {
   int result = lgGpioClaimAlert(NUM2INT(handle), NUM2INT(flags), NUM2INT(eFlags), NUM2INT(gpio), -1);
   return INT2NUM(result);
 }

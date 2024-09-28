@@ -5,8 +5,8 @@ BUTTON    = 259
 LED       = 272
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.gpio_claim_input(chip_handle, LGPIO::SET_PULL_UP, BUTTON)
-LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, LED, LGPIO::LOW)
+LGPIO.gpio_claim_input(chip_handle, BUTTON, LGPIO::SET_PULL_UP)
+LGPIO.gpio_claim_output(chip_handle, LED, LGPIO::SET_PULL_NONE, LGPIO::LOW)
 
 loop do
   if LGPIO.gpio_read(chip_handle, BUTTON) == 0

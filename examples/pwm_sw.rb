@@ -7,7 +7,7 @@ PWM_OFFSET  = 0
 PWM_CYCLES  = 0    # 0 = infinite
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, LED, LGPIO::LOW)
+LGPIO.gpio_claim_output(chip_handle, LED, LGPIO::SET_PULL_NONE, LGPIO::LOW)
 
 # Seamless loop from 0-100 and back.
 duty_cycles = (0..100).to_a + (1..99).to_a.reverse

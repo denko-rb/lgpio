@@ -7,7 +7,7 @@ INTERVAL    = 250_000 # 250ms
 TIMES       = 10
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.group_claim_output(chip_handle, LGPIO::SET_PULL_NONE, LEDS, INIT_STATE)
+LGPIO.group_claim_output(chip_handle, LEDS, LGPIO::SET_PULL_NONE, INIT_STATE)
 
 # Generic pulse that updates both LED states (first element) each INTERVAL.
 generic_pulse = [ nil, 0b11, INTERVAL ]

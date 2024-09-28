@@ -7,8 +7,8 @@ LEDS        = [272, 258]
 INIT_STATE  = [0, 0]
 
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
-LGPIO.group_claim_input(chip_handle, LGPIO::SET_PULL_UP, BUTTONS)
-LGPIO.group_claim_output(chip_handle, LGPIO::SET_PULL_NONE, LEDS, INIT_STATE)
+LGPIO.group_claim_input(chip_handle, BUTTONS, LGPIO::SET_PULL_UP)
+LGPIO.group_claim_output(chip_handle, LEDS, LGPIO::SET_PULL_NONE, INIT_STATE)
 
 # The inverted (active-low) state of each button controls the corresponding LED.
 loop do

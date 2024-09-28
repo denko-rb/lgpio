@@ -15,9 +15,9 @@ DC_PIN      = 6
 # Initialize
 chip_handle = LGPIO.chip_open(GPIO_CHIP)
 spi_bb      = LGPIO::SPIBitBang.new(handle: chip_handle, clock: CLOCK_PIN, output: OUTPUT_PIN)
-LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, SELECT_PIN, LGPIO::HIGH)
-LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, RESET_PIN, LGPIO::LOW)
-LGPIO.gpio_claim_output(chip_handle, LGPIO::SET_PULL_NONE, DC_PIN, LGPIO::LOW)
+LGPIO.gpio_claim_output(chip_handle, SELECT_PIN, LGPIO::SET_PULL_NONE, LGPIO::HIGH)
+LGPIO.gpio_claim_output(chip_handle, RESET_PIN, LGPIO::SET_PULL_NONE, LGPIO::LOW)
+LGPIO.gpio_claim_output(chip_handle, DC_PIN, LGPIO::SET_PULL_NONE, LGPIO::LOW)
 
 # OLED STARTUP
 LGPIO.gpio_write(chip_handle, RESET_PIN, 1)
