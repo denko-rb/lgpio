@@ -4,7 +4,7 @@ module LGPIO
     NS_PER_US = 1_000
     SYS_FS_PWM_PATH = "/sys/class/pwm/"
 
-    attr_reader :period, :duty, :enabled
+    attr_reader :polarity, :period, :duty, :enabled
 
     def initialize(chip, channel, frequency: nil, period: nil)
       @chip    = chip
@@ -15,12 +15,19 @@ module LGPIO
         raise "either period: or frequency: is required, but not both"
       end
 
+      # Default to normal polarity.
+      self.polarity = :normal
+
       period ? self.period = period : self.frequency = frequency
       enable
     end
 
     def path
       @path ||= "#{SYS_FS_PWM_PATH}pwmchip#{@chip}/pwm#{@channel}/"
+    end
+
+    def polarity_path
+      @polarity_path ||= "#{path}polarity"
     end
 
     def period_path
@@ -33,6 +40,16 @@ module LGPIO
 
     def enable_path
       @enable_path ||= "#{path}enable"
+    end
+
+    def polarity=(p=:normal)
+      if p == :inversed
+        File.open(polarity_path, 'w') { |f| f.write("inversed") }
+        @polarity = :inversed
+      else
+        File.open(polarity_path, 'w') { |f| f.write("normal") }
+        @polarity = :normal
+      end
     end
 
     def frequency=(freq)
