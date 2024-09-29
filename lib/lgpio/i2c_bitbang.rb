@@ -20,6 +20,10 @@ module LGPIO
       initialize_pins
     end
 
+    def config
+      @config ||= [scl_handle, scl_line, sda_handle, scl_line]
+    end
+
     def initialize_pins
       LGPIO.gpio_claim_output(scl_handle, scl_line, LGPIO::SET_PULL_NONE, LGPIO::HIGH)
       LGPIO.gpio_claim_output(sda_handle, sda_line, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, LGPIO::HIGH)
