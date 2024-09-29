@@ -19,7 +19,7 @@ module LGPIO
       @handle = handle
       @gpio   = gpio
       @found_addresses = []
-      LGPIO.gpio_claim_output(handle, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, gpio, LGPIO::HIGH)
+      LGPIO.gpio_claim_output(handle, gpio, LGPIO::SET_OPEN_DRAIN | LGPIO::SET_PULL_UP, LGPIO::HIGH)
     end
 
     def reset
