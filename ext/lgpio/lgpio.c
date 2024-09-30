@@ -190,7 +190,7 @@ static VALUE tx_pulse(VALUE self, VALUE handle, VALUE gpio, VALUE on, VALUE off,
 }
 
 static VALUE tx_pwm(VALUE self, VALUE handle, VALUE gpio, VALUE freq, VALUE duty, VALUE offset, VALUE cycles) {
-  int result = lgTxPwm(NUM2INT(handle), NUM2INT(gpio), NUM2INT(freq), NUM2INT(duty), NUM2INT(offset), NUM2INT(cycles));
+  int result = lgTxPwm(NUM2INT(handle), NUM2INT(gpio), NUM2INT(freq), NUM2DBL(duty), NUM2INT(offset), NUM2INT(cycles));
   return INT2NUM(result);
 }
 
