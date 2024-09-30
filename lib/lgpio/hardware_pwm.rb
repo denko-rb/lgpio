@@ -54,6 +54,12 @@ module LGPIO
 
     def frequency=(freq)
       self.period = (NS_PER_S / freq.to_f).round
+      @frequency = freq
+    end
+
+    def frequency
+      # If not set explicitly, calculate from period, rounded to nearest Hz.
+      @frequency ||= (1_000_000_000.0 / period).round
     end
 
     def period=(p)
@@ -62,6 +68,7 @@ module LGPIO
         File.open(duty_path, 'w') { |f| f.write("0") }
       end
       File.open(period_path, 'w') { |f| f.write(p) }
+      @frequency = nil
       @period = p
     end
 
