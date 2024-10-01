@@ -227,7 +227,7 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
   // Convert pulses from microseconds to nanoseconds.
   uint32_t pulseCount = rb_array_len(pulses);
   uint64_t nanoPulses[pulseCount];
-  for (int i=0; i<pulseCount; i++) {
+  for (uint32_t i=0; i<pulseCount; i++) {
     nanoPulses[i] = NUM2UINT(rb_ary_entry(pulses, i)) * 1000;
   }
 
@@ -242,7 +242,7 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
   const char *cDuty = StringValueCStr(dutyString);
 
   // Toggle duty cycle between given value and 0, to modulate the PWM carrier.
-  for (int i=0; i<pulseCount; i++) {
+  for (uint32_t i=0; i<pulseCount; i++) {
     if (i % 2 == 0) {
       dutyFile = fopen(filePath, "w");
       fputs(cDuty, dutyFile);
@@ -259,6 +259,7 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
   dutyFile = fopen(filePath, "w");
   fputs("0", dutyFile);
   fclose(dutyFile);
+  return UINT2NUM(pulseCount);
 }
 
 /*****************************************************************************/
@@ -522,7 +523,7 @@ static VALUE gpio_read_pulses_us(VALUE self, VALUE rbHandle, VALUE rbGPIO, VALUE
   // Return Ruby array of pulse as microseconds
   if (pulseIndex == 0) return Qnil;
   VALUE retArray = rb_ary_new2(pulseIndex);
-  for(int i=0; i<pulseIndex; i++){
+  for(uint32_t i=0; i<pulseIndex; i++){
     uint32_t pulse_us = round(pulses_ns[i] / 1000.0);
     rb_ary_store(retArray, i, UINT2NUM(pulse_us));
   }
