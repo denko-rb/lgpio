@@ -86,6 +86,7 @@ static VALUE gpio_write(VALUE self, VALUE handle, VALUE gpio, VALUE level) {
 }
 
 static VALUE group_claim_input(VALUE self, VALUE handle, VALUE gpios, VALUE flags) {
+  Check_Type(gpios, T_ARRAY);
   int count = rb_array_len(gpios);
   int lgGpios[count];
   int i;
@@ -97,6 +98,7 @@ static VALUE group_claim_input(VALUE self, VALUE handle, VALUE gpios, VALUE flag
 }
 
 static VALUE group_claim_output(VALUE self, VALUE handle, VALUE gpios, VALUE flags, VALUE levels) {
+  Check_Type(gpios, T_ARRAY);
   int count = rb_array_len(gpios);
   int lgGpios[count];
   int lgLevels[count];
@@ -201,6 +203,7 @@ static VALUE tx_servo(VALUE self, VALUE handle, VALUE gpio, VALUE width, VALUE f
 
 static VALUE tx_wave(VALUE self, VALUE handle, VALUE lead_gpio, VALUE pulses) {
   // Copy Ruby array to array of lgPulse_t.
+  Check_Type(pulses, T_ARRAY);
   int       pulseCount = rb_array_len(pulses);
   lgPulse_t pulsesOut[pulseCount];
   VALUE     rbPulse;
@@ -225,6 +228,7 @@ static VALUE tx_wave_ook(VALUE self, VALUE dutyPath, VALUE dutyString, VALUE pul
   // The Ruby class LGPIO::HardwarePWM should have already set the PWM carrier frequency.
   //
   // Convert pulses from microseconds to nanoseconds.
+  Check_Type(pulses, T_ARRAY);
   uint32_t pulseCount = rb_array_len(pulses);
   uint64_t nanoPulses[pulseCount];
   for (uint32_t i=0; i<pulseCount; i++) {
@@ -275,12 +279,13 @@ static VALUE i2c_close(VALUE self, VALUE handle){
   return INT2NUM(result);
 }
 
-static VALUE i2c_write_device(VALUE self, VALUE handle, VALUE byteArray){
-  int count = RARRAY_LEN(byteArray);
+static VALUE i2c_write_device(VALUE self, VALUE handle, VALUE txArray){
+  Check_Type(txArray, T_ARRAY);
+  int count = rb_array_len(txArray);
   uint8_t txBuf[count];
   VALUE currentByte;
   for(int i=0; i<count; i++){
-    currentByte = rb_ary_entry(byteArray, i);
+    currentByte = rb_ary_entry(txArray, i);
     Check_Type(currentByte, T_FIXNUM);
     txBuf[i] = NUM2CHR(currentByte);
   }
@@ -304,7 +309,8 @@ static VALUE i2c_read_device(VALUE self, VALUE handle, VALUE count){
 }
 
 static VALUE i2c_zip(VALUE self, VALUE handle, VALUE txArray, VALUE rb_rxCount){
-  int txCount = RARRAY_LEN(txArray);
+  Check_Type(txArray, T_ARRAY);
+  int txCount = rb_array_len(txArray);
   uint8_t txBuf[txCount];
   VALUE currentByte;
   for(int i=0; i<txCount; i++){
@@ -358,7 +364,8 @@ static VALUE spi_read(VALUE self, VALUE handle, VALUE rxCount){
 }
 
 static VALUE spi_write(VALUE self, VALUE handle, VALUE txArray){
-  int count = RARRAY_LEN(txArray);
+  Check_Type(txArray, T_ARRAY);
+  int count = rb_array_len(txArray);
   uint8_t txBuf[count];
   VALUE currentByte;
   for(int i=0; i<count; i++){
@@ -372,7 +379,8 @@ static VALUE spi_write(VALUE self, VALUE handle, VALUE txArray){
 }
 
 static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray){
-  int count = RARRAY_LEN(txArray);
+  Check_Type(txArray, T_ARRAY);
+  int count = rb_array_len(txArray);
   uint8_t txBuf[count];
   VALUE currentByte;
   for(int i=0; i<count; i++){
@@ -395,7 +403,8 @@ static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray){
 }
 
 static VALUE spi_ws2812_write(VALUE self, VALUE handle, VALUE pixelArray){
-  int count = RARRAY_LEN(pixelArray);
+  Check_Type(pixelArray, T_ARRAY);
+  int count = rb_array_len(pixelArray);
 
   // Pull low for at least one byte at 2.4 Mhz before data, and 90 after.
   int zeroesBefore = 1;
