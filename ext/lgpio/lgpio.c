@@ -378,25 +378,34 @@ static VALUE spi_write(VALUE self, VALUE handle, VALUE txArray){
   return INT2NUM(result);
 }
 
-static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray){
+static VALUE spi_xfer(VALUE self, VALUE handle, VALUE txArray, VALUE rxLength){
   Check_Type(txArray, T_ARRAY);
-  int count = rb_array_len(txArray);
+  int txCount = rb_array_len(txArray);
+  int rxCount = NUM2INT(rxLength);
+  int count   = txCount;
+  if (rxCount > txCount) count = rxCount;
+
   uint8_t txBuf[count];
+  // Not sure if this needs null termination like I2C. +1 won't hurt.
+  uint8_t rxBuf[count+1];
+
+  // Add given bytes to transmit.
   VALUE currentByte;
-  for(int i=0; i<count; i++){
+  for(int i=0; i<txCount; i++){
     currentByte = rb_ary_entry(txArray, i);
     Check_Type(currentByte, T_FIXNUM);
     txBuf[i] = NUM2CHR(currentByte);
   }
-
-  // Not sure if this needs null termination like I2C. +1 won't hurt.
-  uint8_t rxBuf[count+1];
+  // Extend with zeroes if reading more than writing.
+  if (count > txCount) {
+    for(int i=txCount; i<count; i++) txBuf[i] = 0;
+  }
 
   int result = lgSpiXfer(NUM2INT(handle), txBuf, rxBuf, count);
   if(result < 0) return INT2NUM(result);
 
-  VALUE retArray = rb_ary_new2(count);
-  for(int i=0; i<count; i++){
+  VALUE retArray = rb_ary_new2(rxCount);
+  for(int i=0; i<rxCount; i++){
     rb_ary_store(retArray, i, UINT2NUM(rxBuf[i]));
   }
   return retArray;
@@ -674,7 +683,7 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "spi_close",          spi_close,         1);
   rb_define_singleton_method(mLGPIO, "spi_read",           spi_read,          2);
   rb_define_singleton_method(mLGPIO, "spi_write",          spi_write,         2);
-  rb_define_singleton_method(mLGPIO, "spi_xfer",           spi_xfer,          2);
+  rb_define_singleton_method(mLGPIO, "spi_xfer",           spi_xfer,          3);
   rb_define_singleton_method(mLGPIO, "spi_ws2812_write",   spi_ws2812_write,  2);
 
   // Bit-Bang Pulse Input
