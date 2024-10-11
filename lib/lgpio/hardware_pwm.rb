@@ -15,10 +15,12 @@ module LGPIO
         raise "either period: or frequency: is required, but not both"
       end
 
-      # Default to normal polarity.
+      period ? self.period = period : self.frequency = frequency
+
+      # Default to with 0 duty cycle and normal polarity.
+      self.duty = 0
       self.polarity = :normal
 
-      period ? self.period = period : self.frequency = frequency
       enable
     end
 
