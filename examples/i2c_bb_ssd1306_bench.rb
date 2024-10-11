@@ -35,8 +35,8 @@ LGPIO.chip_close(scl_handle)
 LGPIO.chip_close(sda_handle) unless (scl_handle == sda_handle)
 
 fps = FRAME_COUNT / (finish - start)
-# Also calculate C calls per second, using roughly 23 calls per byte written.
-cps = (START_ARRAY.length + ((PATTERN_1.length + PATTERN_2.length) / 2) + 2) * 23 * fps
+# Also calculate C calls per second, using roughly 24.5 GPIO calls per byte written.
+cps = (START_ARRAY.length + ((PATTERN_1.length + PATTERN_2.length) / 2) + 2) * 24.5 * fps
 cps = (cps / 1000.0).round
 
 puts "SSD1306 benchmark result: #{fps.round(2)} fps | #{cps}k C calls/s"
