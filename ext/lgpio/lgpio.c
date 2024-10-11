@@ -618,6 +618,83 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
 }
 
 /*****************************************************************************/
+/*                          Bit-Bang I2C Helpers                             */
+/*****************************************************************************/
+static uint8_t bitReadU8(uint8_t* b, uint8_t i) {
+  return (*b >> i) & 0b1;
+}
+
+static void bitWriteU8(uint8_t* b, uint8_t i, uint8_t v) {
+  if (v == 0) {
+    *b &= ~(1 << i);
+  } else {
+    *b |=  (1 << i);
+  }
+}
+
+static void i2c_bb_set_sda(int handle, int gpio, uint8_t* state, uint8_t level) {
+  if (level == *state) return;
+  lgGpioWrite(handle, gpio, level);
+  *state = level;
+}
+
+static VALUE i2c_bb_read_byte(VALUE self, VALUE rbSCL_H, VALUE rbSCL_L, VALUE rbSDA_H, VALUE rbSDA_L, VALUE rbACK) {
+  int scl_H   = NUM2INT(rbSCL_H);
+  int scl_L   = NUM2INT(rbSCL_L);
+  int sda_H   = NUM2INT(rbSDA_H);
+  int sda_L   = NUM2INT(rbSDA_L);
+  uint8_t ack = RTEST(rbACK);
+
+  // Prevent caching by setting opposite to first state SDA will take.
+  uint8_t sdaState = 0;
+  uint8_t b;
+  uint8_t bit;
+
+  // Receive MSB first.
+  for (int i=7; i>=0; i--) {
+    i2c_bb_set_sda(sda_H, sda_L, &sdaState, 1);
+    lgGpioWrite(scl_H, scl_L, 1);
+    bit = lgGpioRead(sda_H, sda_L);
+    lgGpioWrite(scl_H, scl_L, 0);
+
+    bitWriteU8(&b, i, bit);
+  }
+
+  // Send ACK or NACK.
+  i2c_bb_set_sda(sda_H, sda_L, &sdaState, ack ^ 0b1);
+  lgGpioWrite(scl_H, scl_L, 1);
+  lgGpioWrite(scl_H, scl_L, 0);
+
+  return UINT2NUM(b);
+}
+
+static VALUE i2c_bb_write_byte(VALUE self, VALUE rbSCL_H, VALUE rbSCL_L, VALUE rbSDA_H, VALUE rbSDA_L, VALUE rbByte) {
+  int scl_H   = NUM2INT(rbSCL_H);
+  int scl_L   = NUM2INT(rbSCL_L);
+  int sda_H   = NUM2INT(rbSDA_H);
+  int sda_L   = NUM2INT(rbSDA_L);
+  uint8_t b   = NUM2UINT(rbByte);
+
+  // Prevent caching by setting opposite to first state SDA will take.
+  uint8_t sdaState = bitReadU8(&b, 7) ^ 0b1;
+  uint8_t ack;
+
+  // Write MSBFIRST.
+  for (int i=7; i>=0; i--) {
+    i2c_bb_set_sda(sda_H, sda_L, &sdaState, bitReadU8(&b, i));
+    lgGpioWrite(scl_H, scl_L, 1);
+    lgGpioWrite(scl_H, scl_L, 0);
+  }
+
+  // Read and return ACK.
+  i2c_bb_set_sda(sda_H, sda_L, &sdaState, 1);
+  lgGpioWrite(scl_H, scl_L, 1);
+  ack = lgGpioRead(sda_H, sda_L);
+  lgGpioWrite(scl_H, scl_L, 0);
+  return (ack == 0) ? Qtrue : Qfalse;
+}
+
+/*****************************************************************************/
 /*                           EXTENSION INIT                                  */
 /*****************************************************************************/
 void Init_lgpio(void) {
@@ -694,4 +771,8 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "one_wire_bit_read",   one_wire_bit_read,  2);
   rb_define_singleton_method(mLGPIO, "one_wire_bit_write",  one_wire_bit_write, 3);
   rb_define_singleton_method(mLGPIO, "one_wire_reset",      one_wire_reset,     2);
+
+  // Bit-bang I2C Helpers
+  rb_define_singleton_method(mLGPIO, "i2c_bb_write_byte",   i2c_bb_write_byte,    5);
+  rb_define_singleton_method(mLGPIO, "i2c_bb_read_byte",    i2c_bb_read_byte,     5);
 }

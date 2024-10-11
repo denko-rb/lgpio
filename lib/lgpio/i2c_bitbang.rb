@@ -88,6 +88,14 @@ module LGPIO
       (read_bit == 0)
     end
 
+    def read_byte_c(ack)
+      LGPIO.i2c_bb_read_byte(@scl_handle, @scl_line, @sda_handle, @sda_line, ack)
+    end
+
+    def write_byte_c(byte)
+      LGPIO.i2c_bb_write_byte(@scl_handle, @scl_line, @sda_handle, @sda_line, byte)
+    end
+
     def read(address, length)
       raise ArgumentError, "invalid I2C address: #{address}. Range is 0x08..0x77" unless VALID_ADDRESSES.include?(address)
       raise ArgumentError, "invalid Integer for read length: #{length}" unless length.kind_of?(Integer)
@@ -98,10 +106,16 @@ module LGPIO
 
       # Read length bytes, and ACK for all but the last one.
       bytes = []
-      (length-1).times { bytes << read_byte(true) }
-      bytes << read_byte(false)
-      stop
 
+      # Bit-bang per-byte in Ruby.
+      # (length-1).times { bytes << read_byte(true) }
+      # bytes << read_byte(false)
+
+      # Bit-bang per-byte in C.
+      (length-1).times { bytes << read_byte_c(true) }
+      bytes << read_byte_c(false)
+
+      stop
       bytes
     end
 
@@ -111,7 +125,13 @@ module LGPIO
 
       start
       write_byte(write_form(address))
-      bytes.each { |byte| write_byte(byte) }
+
+      # Bit-bang per-byte in Ruby.
+      # bytes.each { |byte| write_byte(byte) }
+
+      # Bit-bang per-byte in C.
+      bytes.each { |byte| write_byte_c(byte) }
+
       stop
     end
 
