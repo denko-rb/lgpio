@@ -42,6 +42,11 @@ static void microDelay(uint64_t micros) {
   nanoDelay(micros * 1000);
 }
 
+static VALUE rbMicroDelay(VALUE self, VALUE micros) {
+  microDelay(NUM2ULL(micros));
+  return Qnil;
+}
+
 /*****************************************************************************/
 /*                              CHIP & GPIO                                 */
 /*****************************************************************************/
@@ -701,7 +706,7 @@ void Init_lgpio(void) {
   // Modules
   VALUE mLGPIO = rb_define_module("LGPIO");
 
-  // Basics
+  // Constants
   rb_define_const(mLGPIO, "SET_ACTIVE_LOW",   INT2NUM(LG_SET_ACTIVE_LOW));
   rb_define_const(mLGPIO, "SET_OPEN_DRAIN",   INT2NUM(LG_SET_OPEN_DRAIN));
   rb_define_const(mLGPIO, "SET_OPEN_SOURCE",  INT2NUM(LG_SET_OPEN_SOURCE));
@@ -711,6 +716,11 @@ void Init_lgpio(void) {
   rb_define_const(mLGPIO, "RISING_EDGE",      INT2NUM(LG_RISING_EDGE));
   rb_define_const(mLGPIO, "FALLING_EDGE",     INT2NUM(LG_FALLING_EDGE));
   rb_define_const(mLGPIO, "BOTH_EDGES",       INT2NUM(LG_BOTH_EDGES));
+
+  // Generic Helpers
+  rb_define_singleton_method(mLGPIO, "micro_delay",        rbMicroDelay,      1);
+
+  // Basic GPIO
   rb_define_singleton_method(mLGPIO, "chip_open",          chip_open,         1);
   rb_define_singleton_method(mLGPIO, "chip_close",         chip_close,        1);
   rb_define_singleton_method(mLGPIO, "gpio_get_mode",      gpio_get_mode,     2);
@@ -744,18 +754,18 @@ void Init_lgpio(void) {
   // Don't use this. Servo will jitter.
   rb_define_singleton_method(mLGPIO, "tx_servo", tx_servo, 6);
 
-  // Hardware PWM waves for on-off-keying.
+  // HW PWM waves, on-off-keying only.
   VALUE cHardwarePWM = rb_define_class_under(mLGPIO, "HardwarePWM", rb_cObject);
   rb_define_method(cHardwarePWM, "tx_wave_ook", tx_wave_ook, 3);
 
-  // I2C
+  // HW I2C
   rb_define_singleton_method(mLGPIO, "i2c_open",           i2c_open,          3);
   rb_define_singleton_method(mLGPIO, "i2c_close",          i2c_close,         1);
   rb_define_singleton_method(mLGPIO, "i2c_write_device",   i2c_write_device,  2);
   rb_define_singleton_method(mLGPIO, "i2c_read_device",    i2c_read_device,   2);
   rb_define_singleton_method(mLGPIO, "i2c_zip",            i2c_zip,           3);
 
-  // SPI
+  // HW SPI
   rb_define_singleton_method(mLGPIO, "spi_open",           spi_open,          4);
   rb_define_singleton_method(mLGPIO, "spi_close",          spi_close,         1);
   rb_define_singleton_method(mLGPIO, "spi_read",           spi_read,          2);
@@ -773,6 +783,6 @@ void Init_lgpio(void) {
   rb_define_singleton_method(mLGPIO, "one_wire_reset",      one_wire_reset,     2);
 
   // Bit-bang I2C Helpers
-  rb_define_singleton_method(mLGPIO, "i2c_bb_write_byte",   i2c_bb_write_byte,    5);
-  rb_define_singleton_method(mLGPIO, "i2c_bb_read_byte",    i2c_bb_read_byte,     5);
+  rb_define_singleton_method(mLGPIO, "i2c_bb_write_byte",   i2c_bb_write_byte,  5);
+  rb_define_singleton_method(mLGPIO, "i2c_bb_read_byte",    i2c_bb_read_byte,   5);
 }
