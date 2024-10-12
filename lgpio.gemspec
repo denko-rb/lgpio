@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
   s.name        = 'lgpio'
   s.version     = LGPIO::VERSION
   s.licenses    = ['MIT']
-  s.summary     = "Use Linux GPIO, I2C, SPI and PWM in Ruby"
+  s.summary     = "Ruby C extension for Linux GPIO"
   s.description = "Use Linux GPIO, I2C, SPI and PWM in Ruby"
 
   s.authors     = ["vickash"]
@@ -13,5 +13,6 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://github.com/denko-rb/lgpio'
   s.metadata    = { "source_code_uri" => "https://github.com/denko-rb/lgpio" }
 
+  s.required_ruby_version = '>=3'
   s.extensions = %w[ext/lgpio/extconf.rb]
 end
