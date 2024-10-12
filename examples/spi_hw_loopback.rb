@@ -12,7 +12,7 @@ puts "TX bytes: #{tx_bytes.inspect}"
 
 # rx_bytes == tx_bytes if MOSI looped back to MISO.
 # rx_byte all 255 when MOSI and MISO not connected.
-rx_bytes = LGPIO.spi_xfer(spi_handle, tx_bytes)
+rx_bytes = LGPIO.spi_xfer(spi_handle, tx_bytes, tx_bytes.length)
 puts "RX bytes: #{rx_bytes.inspect}"
 
 LGPIO.spi_close(spi_handle)
