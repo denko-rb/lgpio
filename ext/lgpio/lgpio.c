@@ -438,8 +438,8 @@ static VALUE spi_ws2812_write(VALUE self, VALUE handle, VALUE pixelArray){
     Check_Type(currentByte_rb, T_FIXNUM);
     currentByte = NUM2CHR(currentByte_rb);
 
-    for (int i=7; i>=0; i--) {
-      currentBit = (currentByte & (1 << i));
+    for (int j=7; j>=0; j--) {
+      currentBit = (currentByte & (1 << j));
       temp = temp << 3;
       temp = (currentBit == 0) ? (temp | 0b100) : (temp | 0b110);
     }
