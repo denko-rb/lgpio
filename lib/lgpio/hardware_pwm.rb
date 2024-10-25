@@ -1,10 +1,10 @@
 module LGPIO
   class HardwarePWM
-    NS_PER_S  = 1_000_000_000
-    NS_PER_US = 1_000
+    NS_PER_S  = 10**9
+    NS_PER_US = 10**3
     SYS_FS_PWM_PATH = "/sys/class/pwm/"
 
-    attr_reader :polarity, :period, :duty, :enabled
+    attr_reader :period, :duty, :polarity, :enabled
 
     def initialize(chip, channel, frequency: nil, period: nil)
       @chip    = chip
@@ -61,14 +61,12 @@ module LGPIO
 
     def frequency
       # If not set explicitly, calculate from period, rounded to nearest Hz.
-      @frequency ||= (1_000_000_000.0 / period).round
+      @frequency ||= (NS_PER_S / period.to_f).round
     end
 
     def period=(p)
-      old_period = File.read("#{path}period").strip.to_i
-      unless (old_period == 0)
-        File.open(duty_path, 'w') { |f| f.write("0") }
-      end
+      old_duty = duty || File.read(duty_path).strip.to_i
+      duty = 0 unless (old_duty == 0)
       File.open(period_path, 'w') { |f| f.write(p) }
       @frequency = nil
       @period = p
