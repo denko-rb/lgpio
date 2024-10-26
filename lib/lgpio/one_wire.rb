@@ -123,12 +123,12 @@ module LGPIO
       new_discrepancies = address ^ complement
 
       high_discrepancy = -1
-      (0..63).each { |i| high_discrepancy = i if new_discrepancies[i] == 0 }
+      (0..63).each { |i| high_discrepancy = i if ((new_discrepancies >> i) & 0b1 == 0) }
 
       [address, high_discrepancy]
     end
 
-    # Convert interleaved address/complement bytes to 64-bit numbers.
+    # Result is 16 bytes, 8 byte address and complement interleaved LSByte first.
     def split_search_result(data)
       address    = 0
       complement = 0
@@ -155,7 +155,7 @@ module LGPIO
       crc = 0b00000000
       bytes.take(bytes.length - 1).each do |byte|
         for bit in (0..7)
-          xor = byte[bit] ^ crc[0]
+          xor = ((byte >> bit) & 0b1) ^ (crc & 0b1)
           crc = crc ^ ((xor * (2 ** 3)) | (xor * (2 ** 4)))
           crc = crc >> 1
           crc = crc | (xor * (2 ** 7))
@@ -165,7 +165,9 @@ module LGPIO
     end
 
     def self.address_to_bytes(address)
-      [address].pack('Q<').split("").map(&:ord)
+      bytes = []
+      8.times { |i| bytes[i] = address >> (8*i) & 0xFF }
+      bytes
     end
   end
 end

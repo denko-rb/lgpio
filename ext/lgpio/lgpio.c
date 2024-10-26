@@ -605,6 +605,7 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
   int handle = NUM2INT(rbHandle);
   int gpio   = NUM2INT(rbGPIO);
   struct timespec start;
+  struct timespec now;
   uint8_t presence = 1;
 
   // Hold low for 500us to reset, then go high.
@@ -615,8 +616,10 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
 
   // Poll for 250us. If a device pulls the line low, return 0 (device present).
   clock_gettime(CLOCK_MONOTONIC, &start);
-  while(nanosSince(&start) < 250000){
-    if (lgGpioRead(handle, gpio) == 0) presence = 0;
+  now = start;
+  while(nanoDiff(&now, &start) < 250000){
+    if (digitalRead(pin) == 0) presence = 0;
+    clock_gettime(CLOCK_MONOTONIC, &now);
   }
 
   return UINT2NUM(presence);
