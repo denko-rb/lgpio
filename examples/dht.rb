@@ -13,7 +13,7 @@ chip_handle = LGPIO.chip_open(GPIO_CHIP)
 #   Maximum number of pulses to read
 #   Timeout in milliseconds
 #
-data = LGPIO.gpio_read_pulses_us(chip_handle, DHT_PIN, 20_000, 0, 84, 100)
+data = LGPIO.gpio_read_pulses_us(chip_handle, DHT_PIN, 10_000, 0, 84, 100)
 
 # Handle errors.
 raise "error: DHT sensor not connected" unless data
