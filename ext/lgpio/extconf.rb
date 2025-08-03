@@ -6,4 +6,6 @@ require 'mkmf'
 #
 $libs += " -llgpio"
 
+$CFLAGS += " -Werror=implicit-function-declaration"
+
 create_makefile('lgpio/lgpio')

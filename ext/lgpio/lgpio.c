@@ -618,7 +618,7 @@ static VALUE one_wire_reset(VALUE self, VALUE rbHandle, VALUE rbGPIO) {
   clock_gettime(CLOCK_MONOTONIC, &start);
   now = start;
   while(nanoDiff(&now, &start) < 250000){
-    if (digitalRead(gpio) == 0) presence = 0;
+    if (lgGpioRead(handle, gpio) == 0) presence = 0;
     clock_gettime(CLOCK_MONOTONIC, &now);
   }
 
